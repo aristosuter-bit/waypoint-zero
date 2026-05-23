@@ -542,7 +542,7 @@ async function playNextDialogue(){
     const r=await fetch(`${API}/tts`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text:next.text,character:ch.character})
+      body:JSON.stringify({text:next.text,voice:ch.character})
     });
     if(!r.ok){D('TTS '+r.status);next.resolve();playNextDialogue();return;}
     const blob=await r.blob();

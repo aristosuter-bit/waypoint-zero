@@ -256,7 +256,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     </button>
     <button class="btn" onclick="teamDeploy()">
       <span class="label">▸ TEAM DEPLOY</span>
-      <span class="sub">Host or join a squad</span>
+      <span class="sub">Host a new squad</span>
+    </button>
+    <div class="divider"><span>OR JOIN</span></div>
+    <input class="input" id="join-code-input" placeholder="ROOM CODE" maxlength="4" style="max-width:180px;font-size:20px;letter-spacing:.3em">
+    <button class="btn" onclick="joinGame()" style="max-width:180px">
+      <span class="label">JOIN GAME</span>
     </button>
     <button class="btn ghost" onclick="trainingDeploy()">
       <span class="label">▸ TRAINING EXERCISE</span>
@@ -726,6 +731,36 @@ function teamDeploy(){
   selectedPack = null;
   showHostRoom();
   connectWS();
+}
+
+function joinGame(){
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if(!code || code.length < 4){
+    const inp = document.getElementById('join-code-input');
+    inp.style.borderColor = '#f44';
+    setTimeout(() => inp.style.borderColor = '#051', 1500);
+    return;
+  }
+  S.mode = 'team';
+  isTraining = false;
+  callsign = callsign || 'OPERATIVE';
+  isHost = false;
+  roomCode = code;
+  selectedPack = null;
+  showJoinRoom();
+  connectWS();
+}
+
+function showJoinRoom(){
+  switchScreen('screen-team');
+  document.getElementById('team-host').style.display = 'none';
+  document.getElementById('team-join').style.display = 'flex';
+  document.getElementById('join-conn').style.display = 'block';
+  document.getElementById('join-conn').textContent = '● Connecting';
+  document.getElementById('join-conn').style.color = '#f80';
+  document.getElementById('join-players').style.display = 'none';
+  document.getElementById('join-status').style.display = 'none';
+  document.getElementById('join-error').style.display = 'none';
 }
 
 function trainingDeploy(){

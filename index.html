@@ -705,12 +705,58 @@ function submitCallsign(){
   resp.textContent = 'Confirmed: '+name.toUpperCase();
   resp.classList.add('visible');
   input.disabled = true;
-  speak(name+'. Listen carefully. I\'m uploading your first operational briefing now.', 'tactical');
-  setTimeout(() => {
+  speak(name+'. Setting up your field terminal.', 'tactical');
+  
+  // Auto-request sensors before ops desk
+  setTimeout(async () => {
+    await autoRequestSensors();
     switchScreen('screen-ops');
-    // Auto-start GPS
-    if(localStorage.getItem('wz_sensors')==='granted'){ startGPS(); startCompass(); }
-  }, 2500);
+    updateSensorUI();
+  }, 2000);
+}
+
+async function autoRequestSensors(){
+  // Already granted — just start
+  if(localStorage.getItem('wz_sensors')==='granted'){
+    startGPS(); startCompass();
+    return;
+  }
+  // Request geolocation first
+  if(navigator.geolocation){
+    try {
+      await new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          () => { resolve(true); },
+          () => { resolve(false); },
+          { timeout: 5000 }
+        );
+      });
+    } catch(e){}
+  }
+  // Request compass (iOS)
+  if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+    try {
+      const s = await DeviceOrientationEvent.requestPermission();
+      if(s === 'granted'){
+        localStorage.setItem('wz_sensors','granted');
+        startGPS(); startCompass();
+        return;
+      }
+    } catch(e){}
+  }
+  // Start GPS regardless (compass may work without explicit permission on Android)
+  startGPS(); startCompass();
+  localStorage.setItem('wz_sensors','granted');
+}
+
+function updateSensorUI(){
+  const btn = document.querySelector('.sensor-btn');
+  if(localStorage.getItem('wz_sensors')==='granted'){
+    if(btn) btn.style.display = 'none';
+    // Already started in autoRequestSensors
+  } else {
+    if(btn) btn.style.display = 'block';
+  }
 }
 
 // Handle enter key on callsign
@@ -1177,6 +1223,7 @@ function captureWP(idx){
 // ======== PUSH-TO-TALK (WALKIE-TALKIE) ========
 let pttRecorder = null;
 let pttStream = null;
+let voiceBuffers = {}; // player_id → base64 chunks
 
 async function startPTT(e){
   e.preventDefault();
@@ -1187,7 +1234,9 @@ async function startPTT(e){
   
   try {
     pttStream = await navigator.mediaDevices.getUserMedia({audio:true});
-    pttRecorder = new MediaRecorder(pttStream, {mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
+    // Use opus if available for better quality
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+    pttRecorder = new MediaRecorder(pttStream, {mimeType: mime});
     
     btn.classList.add('transmitting');
     btn.textContent = '📻 TX';
@@ -1207,7 +1256,7 @@ async function startPTT(e){
       }
     };
     
-    pttRecorder.start(200); // chunks every 200ms
+    pttRecorder.start(500); // 500ms chunks — fewer gaps
   } catch(err){
     D('PTT mic: '+err.message);
     speak('Microphone access denied.', 'tactical', true);
@@ -1220,52 +1269,74 @@ function stopPTT(){
   const btn = document.getElementById('ptt-btn');
   const ind = document.getElementById('ptt-indicator');
   
-  // Radio squelch off
-  playStatic(0.12, 0.04);
-  
-  pttRecorder.stop();
-  pttRecorder = null;
-  
-  if(pttStream){
-    pttStream.getTracks().forEach(t => t.stop());
-    pttStream = null;
-  }
-  
-  btn.classList.remove('transmitting');
-  btn.textContent = '📻 HOLD';
-  ind.classList.remove('active');
-  
-  // Signal end of transmission
-  if(ws && ws.readyState === WebSocket.OPEN){
-    ws.send(JSON.stringify({type:'voice_end'}));
-  }
+  // Wait for final chunk then stop
+  pttRecorder.requestData();
+  setTimeout(() => {
+    if(pttRecorder){
+      pttRecorder.stop();
+      pttRecorder = null;
+    }
+    if(pttStream){
+      pttStream.getTracks().forEach(t => t.stop());
+      pttStream = null;
+    }
+    btn.classList.remove('transmitting');
+    btn.textContent = '📻 HOLD';
+    ind.classList.remove('active');
+    
+    // Signal end of transmission
+    if(ws && ws.readyState === WebSocket.OPEN){
+      ws.send(JSON.stringify({type:'voice_end'}));
+    }
+    
+    // Radio squelch off
+    playStatic(0.12, 0.04);
+  }, 300);
 }
 
-function playVoiceChunk(base64data){
-  if(!audioCtx || audioCtx.state !== 'running') return;
+function playVoiceChunk(base64data, playerId){
+  // Buffer chunks per player
+  if(!voiceBuffers[playerId]) voiceBuffers[playerId] = [];
+  voiceBuffers[playerId].push(base64data);
+}
+
+async function playBufferedVoice(playerId){
+  // Concatenate all buffered chunks and play as one continuous audio
+  const chunks = voiceBuffers[playerId] || [];
+  voiceBuffers[playerId] = [];
+  if(chunks.length === 0) return;
   
-  const binary = atob(base64data);
+  // Concatenate base64 strings
+  const combined = chunks.join('');
+  const binary = atob(combined);
   const bytes = new Uint8Array(binary.length);
   for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
   
-  audioCtx.decodeAudioData(bytes.buffer, (audioBuffer) => {
+  if(!audioCtx || audioCtx.state !== 'running') return;
+  
+  try {
+    const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
+    
     const src = audioCtx.createBufferSource();
     src.buffer = audioBuffer;
     
-    // Radio bandpass filter
+    // Soft radio filter — wider bandpass for clarity
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.value = 1000;
-    filter.Q.value = 0.7;
+    filter.frequency.value = 800;
+    filter.Q.value = 0.5;
     
+    // Bit of distortion for radio feel
     const gain = audioCtx.createGain();
-    gain.gain.value = 1.2;
+    gain.gain.value = 1.1;
     
     src.connect(filter);
     filter.connect(gain);
     gain.connect(audioCtx.destination);
     src.start();
-  }, () => { /* decode error, skip */ });
+  } catch(e){
+    D('Voice decode: '+e.message);
+  }
 }
 
 // ======== CAMERA ========
@@ -1486,11 +1557,12 @@ function connectWS(){
       startScore(); // fire-and-forget
       fetchMission('jog');
     } else if(d.type === 'voice'){
-      // Incoming voice chunk — play it
-      if(d.data) playVoiceChunk(d.data);
+      // Buffer incoming voice chunk
+      if(d.data) playVoiceChunk(d.data, d.player_id || 'unknown');
     } else if(d.type === 'voice_end'){
-      // End of transmission — short static burst
+      // End of transmission — play buffered audio
       playStatic(0.1, 0.03);
+      playBufferedVoice(d.player_id || 'unknown');
     }
   };
 

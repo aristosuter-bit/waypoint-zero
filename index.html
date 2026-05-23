@@ -1022,7 +1022,7 @@ function genFallback(){
 }
 
 // ======== DISTANCE-BASED SOLO MISSIONS ========
-function pickDistance(km){
+async function pickDistance(km){
   const timeLimits = {1:720, 2:1500, 5:3600, 10:7200}; // seconds
   const objectives = {
     1: ['Sprint recon — extract intel and return to base', 'Rapid sweep — locate the beacon before window closes', 'Flash patrol — map the sector under pressure'],
@@ -1038,8 +1038,6 @@ function pickDistance(km){
   const lat = S.lat || 47.3312;
   const lng = S.lng || 9.4105;
   
-  // Generate loop route
-  S.waypoints = generateLoopRoute(lat, lng, S.targetDist);
   S.missionId = 'FIELD-'+km+'K-'+Math.random().toString(36).slice(2,5).toUpperCase();
   S.packId = null;
   S.packName = null;
@@ -1050,8 +1048,96 @@ function pickDistance(km){
   S.missionObj = objs[Math.floor(Math.random() * objs.length)];
   S.threatLevel = km <= 2 ? 'MODERATE' : km <= 5 ? 'ELEVATED' : 'HIGH';
   
+  // Show loading
+  switchScreen('screen-briefing');
+  startScore();
+  document.getElementById('brief-op').textContent = 'CALCULATING…';
+  document.getElementById('brief-obj').textContent = 'Snapping route to roads…';
+  document.getElementById('brief-threat').textContent = '…';
+  document.getElementById('brief-wp').textContent = '…';
+  document.getElementById('brief-locations').innerHTML = '<div style="color:#f80;font-size:8px;text-align:center;animation:blink 1s infinite">CONNECTING TO NAVIGATION SATELLITES…</div>';
+  document.getElementById('brief-narrative').style.display = 'none';
+  
+  try {
+    S.waypoints = await generateRoadRoute(lat, lng, S.targetDist);
+  } catch(e){
+    D('OSRM failed: '+e.message+', using fallback');
+    S.waypoints = generateLoopRoute(lat, lng, S.targetDist);
+  }
+  
   // Show briefing
   briefGeneratedMission();
+}
+
+async function generateRoadRoute(centerLat, centerLng, distanceM){
+  const radius = distanceM / (2 * Math.PI);
+  
+  // Generate 5-7 anchor points in a rough loop
+  const numAnchors = Math.max(4, Math.ceil(distanceM / 1500));
+  const anchors = [];
+  for(let i = 0; i < numAnchors; i++){
+    const bearingDeg = (i / numAnchors) * 360 + (Math.random() * 40 - 20);
+    const r = radius * (0.6 + Math.random() * 0.8);
+    const pt = destinationPoint(centerLat, centerLng, r, bearingDeg);
+    anchors.push(pt);
+  }
+  
+  // Build OSRM request: start → anchors → back to start (loop)
+  const allPts = [{lat: centerLat, lng: centerLng}, ...anchors, {lat: centerLat, lng: centerLng}];
+  const coordStr = allPts.map(p => `${p.lng},${p.lat}`).join(';');
+  const url = `https://router.project-osrm.org/route/v1/foot/${coordStr}?overview=full&steps=true&geometries=geojson`;
+  
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error('OSRM HTTP '+resp.status);
+  const data = await resp.json();
+  if(!data.routes || !data.routes[0]) throw new Error('No route found');
+  if(data.code !== 'Ok') throw new Error('OSRM: '+data.code);
+  
+  const route = data.routes[0];
+  const waypoints = [];
+  let stepIdx = 0;
+  
+  route.legs.forEach(leg => {
+    leg.steps.forEach(step => {
+      const type = step.maneuver.type;
+      // Skip depart, arrive, and trivial continues
+      if(type === 'depart' || type === 'arrive') return;
+      // Skip very short "continue" steps (not meaningful turns)
+      if(type === 'continue' && step.distance < 80) return;
+      
+      const instr = step.maneuver.instruction || 'Continue';
+      const loc = step.maneuver.location; // [lng, lat]
+      const streetName = step.name || '';
+      
+      waypoints.push({
+        lat: loc[1],
+        lng: loc[0],
+        name: streetName || ('TURN-'+String(++stepIdx).padStart(2,'0')),
+        intel: instr,
+        nav_text: instr,
+      });
+      
+      stepIdx++;
+    });
+  });
+  
+  D('Road route: '+waypoints.length+' turns, total distance: '+(route.distance/1000).toFixed(1)+'km');
+  
+  // If too many waypoints, thin them out
+  if(waypoints.length > 40){
+    const step = Math.ceil(waypoints.length / 30);
+    const thinned = [];
+    for(let i = 0; i < waypoints.length; i += step){
+      thinned.push(waypoints[i]);
+    }
+    // Always keep the last one
+    if(thinned[thinned.length-1] !== waypoints[waypoints.length-1]){
+      thinned.push(waypoints[waypoints.length-1]);
+    }
+    return thinned;
+  }
+  
+  return waypoints;
 }
 
 function generateLoopRoute(centerLat, centerLng, distanceM){

@@ -594,7 +594,6 @@ function stopScore(){
 }
 
 // ======== VOICE SYSTEM ========
-let curAudio = null;
 let voiceQueue = [];
 let voicePlaying = false;
 
@@ -605,6 +604,7 @@ const VOICE_MODES = {
   alert: {voice:'tactical', speed:'+15%', pitch:'+2Hz'},
   shout: {voice:'operator', speed:'+25%', pitch:'+5Hz'}
 };
+let curSource = null;
 
 async function speak(text, mode='tactical', urgent=false){
   const m = VOICE_MODES[mode] || VOICE_MODES.tactical;
@@ -616,25 +616,29 @@ async function speak(text, mode='tactical', urgent=false){
   voicePlaying = true;
   updateVoiceDot(mode);
   try {
-    if(curAudio){ curAudio.pause(); curAudio = null; }
+    if(curSource){ try{curSource.stop();}catch(e){} curSource = null; }
     const r = await fetch(API+'/tts', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({text, voice:m.voice, speed:m.speed, pitch:m.pitch})
     });
     if(!r.ok){ D('TTS '+r.status); voicePlaying=false; playNextInQueue(); return; }
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-    const a = new Audio(url);
-    a.volume = mode==='shout'?1:mode==='whisper'?.6:.85;
-    a.onended = () => {
+    const arrayBuf = await r.arrayBuffer();
+    if(!audioCtx) initAudio();
+    const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+    const source = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    gain.gain.value = mode==='shout'?1:mode==='whisper'?.6:.85;
+    source.buffer = audioBuf;
+    source.connect(gain);
+    gain.connect(audioCtx.destination);
+    source.onended = () => {
       updateVoiceDot(null);
-      URL.revokeObjectURL(url);
       voicePlaying = false;
       playNextInQueue();
     };
-    a.play().catch(()=>{ voicePlaying=false; playNextInQueue(); });
-    curAudio = a;
+    source.start();
+    curSource = source;
   } catch(e){ D('TTS: '+e.message); voicePlaying=false; playNextInQueue(); }
 }
 

@@ -41,21 +41,21 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .input::placeholder{color:#041}
 .input.email{text-transform:none;letter-spacing:.05em;font-size:14px}
 
-.btn{background:rgba(0,20,0,.3);color:#0f0;border:1px solid #0a0;padding:14px 32px;font-size:13px;font-weight:900;font-family:inherit;letter-spacing:.15em;cursor:pointer;text-transform:uppercase;transition:all .15s;width:100%;max-width:300px;backdrop-filter:blur(6px);position:relative;overflow:hidden}
-.btn::after{content:'';position:absolute;inset:0;background:rgba(0,255,0,.04);opacity:0;transition:opacity .2s}
+.btn{background:rgba(0,25,0,.45);color:#0f0;border:1px solid #0a0;padding:14px 32px;font-size:14px;font-weight:900;font-family:inherit;letter-spacing:.15em;cursor:pointer;text-transform:uppercase;transition:all .15s;width:100%;max-width:300px;backdrop-filter:blur(6px);position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(0,255,0,.06);opacity:0;transition:opacity .2s}
 .btn:active::after{opacity:1}
-.btn:active{transform:scale(.98);border-color:#0f0;box-shadow:0 0 20px rgba(0,255,0,.15)}
+.btn:active{transform:scale(.98);border-color:#0f0;box-shadow:0 0 20px rgba(0,255,0,.2)}
 .btn:disabled{opacity:.25;pointer-events:none}
-.btn .label{display:block;font-size:11px;letter-spacing:.18em;font-weight:900}
-.btn .sub{display:block;font-size:8px;color:#050;letter-spacing:.12em;margin-top:2px}
+.btn .label{display:block;font-size:13px;letter-spacing:.18em;font-weight:900}
+.btn .sub{display:block;font-size:9px;color:#090;letter-spacing:.12em;margin-top:2px}
 .btn .tag{display:inline-block;font-size:7px;background:rgba(255,80,0,.15);color:#f80;padding:1px 6px;letter-spacing:.1em;margin-top:3px}
 
 .btn.primary{border-width:2px;background:rgba(0,30,0,.4);animation:pulse 3s infinite;padding:18px 32px}
 .btn.primary .label{font-size:14px}
 .btn.danger{color:#f44;border-color:#600;background:rgba(20,0,0,.3)}
 .btn.danger:active{background:rgba(40,0,0,.5);box-shadow:0 0 20px rgba(255,0,0,.15)}
-.btn.ghost{background:transparent;color:#060;border:1px solid #030;box-shadow:none;padding:10px 20px;font-size:10px;max-width:200px}
-.btn.ghost:active{color:#0a0;border-color:#0a0}
+.btn.ghost{background:transparent;color:#0a0;border:1px solid #060;box-shadow:none;padding:10px 20px;font-size:11px;max-width:200px}
+.btn.ghost:active{color:#0f0;border-color:#0a0}
 .btn.small{padding:8px 16px;font-size:9px;max-width:160px;letter-spacing:.1em}
 
 .divider{width:100%;max-width:300px;border-top:1px solid #030;margin:12px 0;position:relative}
@@ -170,7 +170,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mission .minimap .leaflet-control-zoom,.mission .minimap .leaflet-control-attribution{display:none}
 
 /* HUD overlays — float above full-screen map */
-.mission .m-header,.mission #heading-debug,.mission .compass-area,.mission .nav-info,.mission .tension-bar,.mission .breath-box,.mission .m-footer,.mission .alert-banner{position:relative;z-index:5}
+.mission .m-header,.mission .compass-area,.mission .nav-info,.mission .tension-bar,.mission .breath-box,.mission .m-footer,.mission .alert-banner{position:relative;z-index:5}
 
 /* ====== MISSION ====== */
 .mission{padding:10px;gap:4px;justify-content:flex-start}
@@ -184,15 +184,15 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mission .alert-banner{background:rgba(255,80,0,.06);border:1px solid #600;padding:3px 10px;font-size:8px;color:#f80;letter-spacing:.1em;text-align:center;display:none;width:100%}
 .mission .alert-banner.active{display:block;animation:blink 1s infinite}
 
-.mission .compass-area{flex:none;display:flex;align-items:center;justify-content:center;position:relative;min-height:60px;max-height:80px;width:100%}
-.mission .compass-ring{width:60px;height:60px;border-radius:50%;border:2px solid #0a0;position:relative;box-shadow:0 0 12px rgba(0,255,0,.05),inset 0 0 12px rgba(0,255,0,.02);transition:transform .5s}
-.mission .compass-ring.hot{border-color:#f80;box-shadow:0 0 20px rgba(255,80,0,.1)}
-.mission .compass-ring.go-time{border-color:#f44;box-shadow:0 0 30px rgba(255,0,0,.15);animation:pulseRed .5s infinite}
-.mission .compass-n,.mission .compass-s,.mission .compass-e,.mission .compass-w{position:absolute;font-size:6px;color:#0a0;font-weight:900}
-.mission .compass-n{top:2px;left:50%;transform:translateX(-50%)}.mission .compass-s{bottom:2px;left:50%;transform:translateX(-50%);color:#020}
-.mission .compass-e{right:2px;top:50%;transform:translateY(-50%);color:#020}.mission .compass-w{left:2px;top:50%;transform:translateY(-50%);color:#020}
-.mission .compass-arrow{position:absolute;top:50%;left:50%;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;border-bottom:8px solid #0f0;transform:translate(-50%,-100%);filter:drop-shadow(0 0 4px #0f0);transition:transform .4s;z-index:2}
-.mission .tm-marker{position:absolute;width:2px;height:2px;border-radius:50%;transform:translate(-50%,-50%);z-index:1;transition:all .5s}
+.mission .compass-area{flex:none;display:flex;align-items:center;justify-content:center;position:relative;min-height:110px;max-height:130px;width:100%}
+.mission .compass-ring{width:100px;height:100px;border-radius:50%;border:2px solid #0a0;position:relative;box-shadow:0 0 15px rgba(0,255,0,.08),inset 0 0 15px rgba(0,255,0,.03);transition:transform .5s}
+.mission .compass-ring.hot{border-color:#f80;box-shadow:0 0 25px rgba(255,80,0,.15)}
+.mission .compass-ring.go-time{border-color:#f44;box-shadow:0 0 35px rgba(255,0,0,.2);animation:pulseRed .5s infinite}
+.mission .compass-n,.mission .compass-s,.mission .compass-e,.mission .compass-w{position:absolute;font-size:9px;color:#0f0;font-weight:900}
+.mission .compass-n{top:6px;left:50%;transform:translateX(-50%)}.mission .compass-s{bottom:6px;left:50%;transform:translateX(-50%);color:#060}
+.mission .compass-e{right:6px;top:50%;transform:translateY(-50%);color:#060}.mission .compass-w{left:6px;top:50%;transform:translateY(-50%);color:#060}
+.mission .compass-arrow{position:absolute;top:50%;left:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:14px solid #0f0;transform:translate(-50%,-100%);filter:drop-shadow(0 0 6px #0f0);transition:transform .4s;z-index:2}
+.mission .tm-marker{position:absolute;width:3px;height:3px;border-radius:50%;transform:translate(-50%,-50%);z-index:1;transition:all .5s}
 .mission .tm-marker::after{content:'';position:absolute;inset:-2px;border-radius:50%;opacity:.4;background:inherit}
 
 .mission .nav-info{text-align:center;padding:2px 0;width:100%}
@@ -381,7 +381,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div><div class="m-op" id="mission-op-id">OP</div><div class="m-title" id="mission-obj-title">---</div></div>
     <div class="m-timer" id="timer">20:00</div>
   </div>
-  <div style="font-size:7px;color:#030;text-align:center" id="heading-debug">COMPASS: --°</div>
+  <div style="display:none" id="heading-debug"></div>
   <div class="compass-area">
     <div class="compass-ring" id="compass-ring">
       <div class="compass-n">N</div><div class="compass-s">S</div><div class="compass-e">E</div><div class="compass-w">W</div>
@@ -448,7 +448,8 @@ let S = {
   tensionLevel:0, lastTension:0, voiceMode:'tactical', goTriggered:false,
   mode:'solo', // solo | team | training
   generated:false, targetDist:0, timeLimit:0,
-  lastNarrativeTime:0, narrativeCount:0, narrativeHistory:[]
+  lastNarrativeTime:0, narrativeCount:0, narrativeHistory:[],
+  breadcrumbs:[]
 };
 
 // ======== AUDIO ENGINE ========
@@ -1286,6 +1287,8 @@ function deployMission(){
   S.tensionLevel = 0; S.lastTension = 0;
   S.goTriggered = false; S.voiceMode = 'tactical';
   S.lastNarrativeTime = Date.now(); S.narrativeCount = 0; S.narrativeHistory = [];
+  S.breadcrumbs = [];
+  if(breadcrumbLine && missionMap){ missionMap.removeLayer(breadcrumbLine); breadcrumbLine = null; }
 
   // Use dynamic time limit for generated missions, default 20min otherwise
   const timeLimit = S.generated ? S.timeLimit : 1200;
@@ -1443,8 +1446,8 @@ function updateNav(){
   updateTeammateMarkers();
   updateMinimap();
   
-  // Narrative beats for generated missions
-  if(S.generated) checkNarrativeBeat();
+  // Narrative beats for generated missions — only when nav isn't speaking
+  if(S.generated && !voicePlaying) checkNarrativeBeat();
 }
 
 // ====== NARRATIVE ENGINE ======
@@ -2100,6 +2103,7 @@ function dist(l1, ln1, l2, ln2){
 let briefingMap = null;
 let missionMap = null;
 let missionMarker = null;
+let breadcrumbLine = null;
 let wpMarkers = [];
 
 function renderBriefingMap(waypoints, playerLat, playerLng){
@@ -2199,6 +2203,16 @@ function initMissionMinimap(waypoints, playerLat, playerLng, hideWaypoints){
 function updateMinimap(){
   if(!missionMap || !S.lat || !S.lng) return;
   missionMarker.setLatLng([S.lat, S.lng]);
+  
+  // Breadcrumb trail — show the path walked
+  if(S.generated && S.active){
+    S.breadcrumbs.push([S.lat, S.lng]);
+    if(S.breadcrumbs.length > 1){
+      if(breadcrumbLine) missionMap.removeLayer(breadcrumbLine);
+      breadcrumbLine = L.polyline(S.breadcrumbs, {color:'#0f0', weight:2, opacity:.4, dashArray:'2 6'}).addTo(missionMap);
+    }
+  }
+  
   // Pan to follow player if they move off screen
   if(!missionMap.getBounds().contains([S.lat, S.lng])){
     missionMap.panTo([S.lat, S.lng], {animate:true});

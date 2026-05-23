@@ -15,15 +15,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 @keyframes pulse{50%{box-shadow:0 0 20px #0f0,0 0 35px #0f0}}
 @keyframes blink{50%{opacity:.3}}
 @keyframes fadeInOut{0%,100%{opacity:.5}50%{opacity:1}}
-@keyframes breatheBox{0%,100%{box-shadow:0 0 4px rgba(0,255,0,.08),inset 0 0 4px rgba(0,255,0,.02)}50%{box-shadow:0 0 10px rgba(0,255,0,.12),inset 0 0 8px rgba(0,255,0,.04)}}
-@keyframes breatheBoxFast{0%,100%{box-shadow:0 0 6px rgba(255,136,0,.12),inset 0 0 6px rgba(255,136,0,.03)}50%{box-shadow:0 0 14px rgba(255,136,0,.2),inset 0 0 10px rgba(255,136,0,.06)}}
-@keyframes breatheBoxPanic{0%,100%{box-shadow:0 0 8px rgba(255,0,0,.15),inset 0 0 8px rgba(255,0,0,.04)}50%{box-shadow:0 0 18px rgba(255,0,0,.28),inset 0 0 14px rgba(255,0,0,.06)}}
 
 /* ====== SHARED ====== */
-.classified{font-size:8px;letter-spacing:.35em;color:#0a0;animation:fadeInOut 3s infinite}
-.crest{font-size:8px;letter-spacing:.25em;color:#050}
-.title{font-size:36px;font-weight:900;letter-spacing:.06em;line-height:.9;text-shadow:0 0 30px #0f0,0 0 60px #0a0}
-.subtitle{font-size:9px;color:#050;letter-spacing:.3em;margin-bottom:20px}
 .input{background:rgba(0,15,0,.4);border:1px solid #0a0;color:#0f0;padding:12px 16px;font-size:14px;font-family:inherit;width:100%;max-width:260px;text-align:center;letter-spacing:.15em;text-transform:uppercase;backdrop-filter:blur(4px)}
 .input::placeholder{color:#020}
 .btn{background:#0f0;color:#000;border:none;padding:12px 28px;font-size:13px;font-weight:900;font-family:inherit;letter-spacing:.12em;cursor:pointer;text-transform:uppercase;transition:.1s;width:100%;max-width:260px;box-shadow:0 0 12px rgba(0,255,0,.2);margin:3px 0}
@@ -32,35 +25,38 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .btn.ghost{background:transparent;color:#0a0;border:1px solid #0a0;box-shadow:none;padding:7px 14px;font-size:9px}
 .btn.blue{background:#002;color:#6af;box-shadow:0 0 12px rgba(100,170,255,.15)}
 .btn.red{background:#200;color:#f44;box-shadow:0 0 12px rgba(255,0,0,.15)}
+.btn.copy{background:rgba(0,15,0,.5);color:#0f0;border:1px solid #0a0;box-shadow:none;padding:8px 16px;font-size:10px;max-width:160px}
 
 /* ====== LOBBY ====== */
-.lobby,.lobby-join,.briefing,.complete{align-items:center;justify-content:center;text-align:center;gap:6px}
-.mode-card{width:100%;max-width:260px;padding:14px;border:1px solid #030;cursor:pointer;text-align:center;transition:.2s;margin:4px 0}
-.mode-card.selected{border-color:#0f0;box-shadow:0 0 15px rgba(0,255,0,.15);background:rgba(0,15,0,.3)}
-.mode-card .mode-icon{font-size:26px;margin-bottom:3px}
-.mode-card .mode-name{font-size:11px;font-weight:900;letter-spacing:.1em;color:#0f0}
-.mode-card .mode-desc{font-size:8px;color:#050;margin-top:2px}
+.lobby{align-items:center;justify-content:center;text-align:center;gap:8px}
+.classified{font-size:8px;letter-spacing:.35em;color:#0a0;animation:fadeInOut 3s infinite}
+.crest{font-size:8px;letter-spacing:.25em;color:#050}
+.title{font-size:36px;font-weight:900;letter-spacing:.06em;line-height:.9;text-shadow:0 0 30px #0f0,0 0 60px #0a0}
+.subtitle{font-size:9px;color:#050;letter-spacing:.3em;margin-bottom:16px}
 
-/* ====== JOIN SCREEN ====== */
-.room-code{font-size:32px;font-weight:900;letter-spacing:.3em;color:#0f0;text-shadow:0 0 20px #0f0;padding:8px 16px;border:1px dashed #0a0;margin:4px 0}
-.status-line{font-size:9px;letter-spacing:.08em;margin:4px 0}
-.status-line.waiting{color:#f80;animation:blink 2s infinite}
-.status-line.ready{color:#0f0}
-.status-line.error{color:#f00}
+.divider{width:100%;max-width:260px;border-top:1px solid #030;margin:8px 0;position:relative}
+.divider span{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:#000;padding:0 10px;font-size:7px;color:#050;letter-spacing:.1em}
+
+/* ====== ROOM LOBBY ====== */
+.room-lobby{align-items:center;justify-content:center;text-align:center;gap:8px}
+.room-code{font-size:42px;font-weight:900;letter-spacing:.4em;color:#0f0;text-shadow:0 0 25px #0f0,0 0 50px #0a0;padding:10px 20px;border:1px dashed #0a0;margin:4px 0}
+.room-code-label{font-size:9px;color:#050;letter-spacing:.15em}
+
 .player-list{width:100%;max-width:260px;margin:8px 0}
 .player-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #030;margin:3px 0;font-size:10px;letter-spacing:.08em}
 .player-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#0f0;box-shadow:0 0 5px #0f0}
-.player-dot.you{background:#0af;box-shadow:0 0 8px #0af}
+.player-dot.host{background:#0af;box-shadow:0 0 8px #0af}
 .player-name{flex:1;text-align:left}
-.player-team{font-size:8px;color:#050}
 
-.conn-indicator{display:flex;align-items:center;gap:6px;font-size:8px;letter-spacing:.08em;margin:4px 0}
-.conn-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.conn-dot.connected{background:#0f0;box-shadow:0 0 5px #0f0}
-.conn-dot.connecting{background:#f80;animation:blink .5s infinite}
-.conn-dot.disconnected{background:#f00}
+.status-line{font-size:9px;letter-spacing:.08em;margin:4px 0;min-height:14px}
+.status-line.waiting{color:#f80;animation:blink 2s infinite}
+.status-line.ready{color:#0f0}
+.status-line.error{color:#f00}
+
+.conn-indicator{font-size:8px;color:#060;letter-spacing:.08em;margin:2px 0}
 
 /* ====== BRIEFING ====== */
+.briefing,.complete{align-items:center;justify-content:center;text-align:center;gap:6px}
 .intel-card{background:rgba(0,15,0,.25);border:1px solid #0a0;padding:14px;max-width:340px;width:100%;text-align:left;font-size:9px;line-height:1.7}
 .intel-card .lbl{color:#0a0;font-size:7px;letter-spacing:.2em}
 .intel-card .val{color:#0f0;margin-bottom:4px}
@@ -93,12 +89,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .wp-name{font-size:10px;color:#0f0;margin-top:2px;letter-spacing:.08em}
 .wp-intel{font-size:8px;color:#050;margin-top:1px;font-style:italic}
 
-.breath-box{margin:4px auto;padding:6px 10px;max-width:240px;border:1px solid #040;text-align:center;animation:breatheBox 4s ease-in-out infinite}
-.breath-box.fast{animation-duration:2s;border-color:#f80;animation-name:breatheBoxFast}
-.breath-box.panic{animation-duration:.8s;border-color:#f00;animation-name:breatheBoxPanic}
+.breath-box{margin:4px auto;padding:6px 10px;max-width:240px;border:1px solid #040;text-align:center;animation:breathBox 4s ease-in-out infinite}
+@keyframes breathBox{0%,100%{box-shadow:0 0 4px rgba(0,255,0,.08),inset 0 0 4px rgba(0,255,0,.02)}50%{box-shadow:0 0 10px rgba(0,255,0,.12),inset 0 0 8px rgba(0,255,0,.04)}}
+.breath-box.fast{animation-duration:2s;border-color:#f80}
+.breath-box.panic{animation-duration:.8s;border-color:#f00}
 .breath-state{font-size:10px;color:#0f0;letter-spacing:.08em}
 .breath-tip{font-size:7px;color:#060;margin-top:1px;font-style:italic}
-.whisper-line{text-align:center;font-size:7px;color:#040;margin:1px 0;min-height:10px;font-style:italic}
 
 .mission-footer{display:flex;gap:4px;padding:2px 0;align-items:center}
 .wp-dots{display:flex;gap:3px;flex:1}
@@ -130,76 +126,56 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div class="voice-dot" id="voice-dot"></div>
 <div class="debug-bar" id="debug-bar"></div>
 
-<!-- ====== SCREEN: MAIN LOBBY ====== -->
+<!-- ====== LOBBY ====== -->
 <div class="screen active lobby" id="screen-lobby">
   <div class="classified">■ CLASSIFIED ■</div>
   <div class="crest">▸ JOINT SPECIAL OPERATIONS COMMAND</div>
   <div class="title">WAYPOINT<br>ZERO</div>
   <div class="subtitle">AUDIO FIELD TERMINAL</div>
 
-  <div class="mode-card selected" id="mode-solo" onclick="selectMode('solo')">
-    <div class="mode-icon">🎯</div><div class="mode-name">SOLO</div><div class="mode-desc">One operative. Full stealth.</div>
-  </div>
-  <div class="mode-card" id="mode-team" onclick="selectMode('team')">
-    <div class="mode-icon">👥</div><div class="mode-name">CO-OP</div><div class="mode-desc">Team up. Shared objectives.</div>
-  </div>
-  <div class="mode-card" id="mode-pvp" onclick="selectMode('pvp')">
-    <div class="mode-icon">⚔️</div><div class="mode-name">PvP</div><div class="mode-desc">Two teams. Hunt each other.</div>
-  </div>
+  <input class="input" id="lobby-callsign" placeholder="YOUR CALLSIGN" maxlength="12" value="GHOST">
 
-  <input class="input" id="lobby-callsign" placeholder="CALLSIGN" maxlength="12" value="GHOST">
+  <button class="btn" onclick="hostGame()">NEW GAME</button>
+  <p style="font-size:8px;color:#050;margin:2px 0">Creates a room — share the code with your team</p>
 
-  <button class="btn" onclick="continueFromLobby()">CONTINUE</button>
+  <div class="divider"><span>OR JOIN</span></div>
+
+  <input class="input" id="lobby-join-code" placeholder="ROOM CODE" maxlength="4" style="max-width:160px;font-size:22px">
+  <button class="btn blue" onclick="joinGame()">JOIN GAME</button>
+
+  <button class="btn ghost" onclick="soloDeploy()">SOLO DEPLOY</button>
   <button class="btn ghost" onclick="requestSensors()">UNLOCK SENSORS</button>
+
   <p style="color:#020;font-size:7px;margin-top:8px;letter-spacing:.12em">HEADPHONES · GPS · CAMERA · COMPASS</p>
   <div id="gps-status" style="color:#300;font-size:7px;margin-top:2px"></div>
 </div>
 
-<!-- ====== SCREEN: JOIN / LOBBY ====== -->
-<div class="screen lobby-join" id="screen-join">
+<!-- ====== ROOM LOBBY ====== -->
+<div class="screen room-lobby" id="screen-room">
   <div class="classified">■ TEAM ASSEMBLY ■</div>
 
-  <!-- CHOICE: host or join -->
-  <div id="join-choice" style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%">
-    <p style="font-size:10px;color:#0a0;letter-spacing:.1em">CO-OP SETUP</p>
-    <button class="btn" onclick="createRoom()">HOST GAME</button>
-    <p style="font-size:8px;color:#050">— or —</p>
-    <input class="input" id="quick-join-code" placeholder="ROOM CODE" maxlength="4" style="max-width:140px;font-size:20px">
-    <button class="btn blue" onclick="joinAsPlayer()">JOIN GAME</button>
-    <button class="btn ghost" onclick="switchScreen('screen-lobby')">BACK</button>
-  </div>
-
-  <!-- HOST VIEW -->
-  <div id="host-view" style="display:none;flex-direction:column;align-items:center;gap:8px;width:100%">
-    <p style="font-size:9px;color:#050">SHARE THIS CODE WITH YOUR TEAM</p>
+  <div id="room-host" style="display:none;flex-direction:column;align-items:center;gap:6px;width:100%">
+    <div class="room-code-label">SHARE THIS CODE</div>
     <div class="room-code" id="room-code">----</div>
-    <div class="conn-indicator">
-      <div class="conn-dot connected" id="conn-dot"></div>
-      <span id="conn-text">Connected</span>
-    </div>
-    <div class="player-list" id="player-list"></div>
-    <div class="status-line waiting" id="status-line">Waiting for players...</div>
-    <button class="btn" onclick="hostDeploy()" id="host-deploy-btn" disabled>REQUEST BRIEFING</button>
+    <button class="btn copy" onclick="copyCode()">📋 COPY CODE</button>
+    <button class="btn copy" onclick="shareCode()" id="share-btn" style="display:none">📤 SHARE</button>
+    <div class="conn-indicator" id="conn-ind">● Connected</div>
+    <div class="player-list" id="host-players"></div>
+    <div class="status-line waiting" id="host-status">Waiting for players...</div>
+    <button class="btn" onclick="hostStartMission()" id="host-start-btn">START MISSION</button>
     <button class="btn ghost" onclick="leaveRoom()">LEAVE</button>
   </div>
 
-  <!-- JOINER VIEW -->
-  <div id="joiner-view" style="display:none;flex-direction:column;align-items:center;gap:8px;width:100%">
-    <p style="font-size:9px;color:#050">ENTER ROOM CODE FROM HOST</p>
-    <input class="input" id="join-code" placeholder="CODE" maxlength="4" style="max-width:140px;font-size:22px">
-    <button class="btn blue" onclick="joinAsPlayer()">JOIN GAME</button>
-    <div class="conn-indicator" id="join-conn" style="display:none">
-      <div class="conn-dot connecting" style="width:6px;height:6px;border-radius:50%"></div>
-      <span style="font-size:8px;color:#f80">Connecting...</span>
-    </div>
-    <div class="status-line error" id="join-error" style="display:none"></div>
-    <div class="player-list" id="join-player-list" style="display:none"></div>
+  <div id="room-join" style="display:none;flex-direction:column;align-items:center;gap:6px;width:100%">
+    <div class="conn-indicator" id="join-conn" style="color:#f80">● Connecting...</div>
+    <div class="player-list" id="join-players" style="display:none"></div>
     <div class="status-line waiting" id="join-status" style="display:none">Waiting for host to start...</div>
+    <div class="status-line error" id="join-error" style="display:none"></div>
     <button class="btn ghost" onclick="leaveRoom()">BACK</button>
   </div>
 </div>
 
-<!-- ====== SCREEN: BRIEFING ====== -->
+<!-- ====== BRIEFING ====== -->
 <div class="screen briefing" id="screen-briefing">
   <div class="classified">■ MISSION BRIEFING ■</div>
   <div class="intel-card">
@@ -212,7 +188,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <button class="btn" onclick="startMission()">DEPLOY</button>
 </div>
 
-<!-- ====== SCREEN: MISSION ====== -->
+<!-- ====== MISSION ====== -->
 <div class="screen" id="screen-mission">
   <div class="alert-banner" id="alert-banner"></div>
   <div class="hdg-debug" id="heading-debug">COMPASS: --°</div>
@@ -235,7 +211,6 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div class="wp-intel" id="wp-intel"></div>
   </div>
   <div class="breath-box" id="breath-box"><div class="breath-state" id="breath-state">STEADY</div><div class="breath-tip" id="breath-tip"></div></div>
-  <div class="whisper-line" id="whisper"></div>
   <div class="mission-footer">
     <div class="wp-dots" id="wp-list"></div>
     <button class="btn ghost" onclick="takePhoto()" id="photo-btn" style="display:none;max-width:80px;font-size:8px">📷</button>
@@ -243,14 +218,14 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
 </div>
 
-<!-- ====== SCREEN: CAMERA ====== -->
+<!-- ====== CAMERA ====== -->
 <div class="screen" id="screen-camera">
   <div class="camera-area"><video id="camera-video" autoplay playsinline></video></div>
   <div class="capture-btn" onclick="capturePhoto()"></div>
   <button class="btn ghost" onclick="closeCamera()" style="position:absolute;top:10px;right:10px;font-size:7px;padding:3px 7px">BACK</button>
 </div>
 
-<!-- ====== SCREEN: COMPLETE ====== -->
+<!-- ====== COMPLETE ====== -->
 <div class="screen complete" id="screen-complete">
   <div class="classified">■ DEBRIEF ■</div>
   <div class="score" id="final-score">0</div>
@@ -267,168 +242,150 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 const API = "https://waypoint-zero.swisschatbot.ch";
 function D(m){ document.getElementById('debug-bar').textContent=m; console.log('[WZ]',m); }
 
-// ======== GAME STATE ========
-let gameMode = 'solo';
+// ======== STATE ========
+let myId = Math.random().toString(36).slice(2,8);
 let callsign = 'GHOST';
 let isHost = false;
 let roomCode = '';
-let myId = Math.random().toString(36).slice(2,8);
 let ws = null;
-let players = []; // {id, name, team, connected}
-let STATE = { missionId:'',waypoints:[],currentWP:0,score:0,startTime:0,elapsed:0,photos:[],gpsLat:null,gpsLng:null,heading:0,missionActive:false,lastNavCall:0,lastBreathDist:9999,_toneTension:0 };
+let players = [];
+let STATE = { missionId:'',waypoints:[],currentWP:0,score:0,startTime:0,elapsed:0,photos:[],gpsLat:null,gpsLng:null,heading:0,missionActive:false,lastNavCall:0,lastBreathDist:9999 };
 
-// ======== MODE + FLOW ========
-function selectMode(m){ gameMode=m; document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('selected')); document.getElementById('mode-'+m).classList.add('selected'); }
-
-function continueFromLobby(){
+// ======== LOBBY ACTIONS ========
+function hostGame(){
   callsign = document.getElementById('lobby-callsign').value.trim()||'GHOST';
-  if(gameMode==='solo'){
-    deploySolo();
-  }else{
-    // Show join screen with host/join choice
-    document.getElementById('join-choice').style.display='flex';
-    document.getElementById('host-view').style.display='none';
-    document.getElementById('joiner-view').style.display='none';
-    switchScreen('screen-join');
-  }
-}
-
-// ======== HOST FLOW ========
-function showHostLobby(){
-  document.getElementById('join-choice').style.display='none';
-  document.getElementById('host-view').style.display='flex';
-  document.getElementById('joiner-view').style.display='none';
-  document.getElementById('room-code').textContent = roomCode;
-  document.getElementById('host-deploy-btn').disabled = true;
-  updateHostStatus();
-}
-
-function createRoom(){
   isHost = true;
   roomCode = Math.random().toString(36).slice(2,6).toUpperCase();
-  players = [{id:myId, name:callsign, team:'alpha', connected:true}];
+  players = [{id:myId, name:callsign, connected:true}];
+  showHostRoom();
   connectWS();
-  showHostLobby();
 }
 
-function hostDeploy(){
-  // Broadcast mission start to all players
-  broadcast({type:'host_deploy'});
-  deploySolo();
-}
-
-function updateHostStatus(){
-  const statusEl = document.getElementById('status-line');
-  const deployBtn = document.getElementById('host-deploy-btn');
-  const connectedCount = players.filter(p=>p.connected).length;
-
-  if(connectedCount >= 2){
-    statusEl.textContent = `${connectedCount} players connected — ready`;
-    statusEl.className = 'status-line ready';
-    deployBtn.disabled = false;
-  }else{
-    statusEl.textContent = `Waiting for players... (${connectedCount} connected)`;
-    statusEl.className = 'status-line waiting';
-    deployBtn.disabled = false; // allow solo deploy too
-  }
-
-  // Render player list
-  document.getElementById('player-list').innerHTML = players.map(p=>
-    `<div class="player-row">
-      <div class="player-dot ${p.id===myId?'you':''}"></div>
-      <span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span>
-      <span class="player-team">${p.team||'?'}</span>
-    </div>`
-  ).join('');
-}
-
-// ======== JOINER FLOW ========
-function joinAsPlayer(){
-  const codeEl = document.getElementById('quick-join-code') || document.getElementById('join-code');
-  const code = codeEl.value.trim().toUpperCase();
-  if(!code||code.length<4) return;
+function joinGame(){
+  callsign = document.getElementById('lobby-callsign').value.trim()||'GHOST';
+  const code = document.getElementById('lobby-join-code').value.trim().toUpperCase();
+  if(!code||code.length<4){ D('Enter a room code'); return; }
   isHost = false;
   roomCode = code;
-  document.getElementById('join-choice').style.display='none';
-  document.getElementById('host-view').style.display='none';
-  document.getElementById('joiner-view').style.display='flex';
-  document.getElementById('join-error').style.display='none';
-  document.getElementById('join-player-list').style.display='none';
-  document.getElementById('join-status').style.display='none';
-  document.getElementById('join-conn').style.display='flex';
+  showJoinRoom();
   connectWS();
 }
 
-function showJoinerLobby(hostName){
-  document.getElementById('join-conn').style.display='none';
-  document.getElementById('join-player-list').style.display='block';
-  document.getElementById('join-status').style.display='block';
-  document.getElementById('join-status').textContent = 'Connected. Waiting for host...';
-  document.getElementById('join-player-list').innerHTML = players.map(p=>
-    `<div class="player-row">
-      <div class="player-dot ${p.id===myId?'you':''}"></div>
-      <span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span>
-    </div>`
-  ).join('');
+function soloDeploy(){
+  callsign = document.getElementById('lobby-callsign').value.trim()||'GHOST';
+  isHost = false;
+  deployMission();
+}
+
+// ======== ROOM UI ========
+function showHostRoom(){
+  document.getElementById('room-host').style.display='flex';
+  document.getElementById('room-join').style.display='none';
+  document.getElementById('room-code').textContent = roomCode;
+  document.getElementById('host-status').textContent = 'Waiting for players...';
+  document.getElementById('host-status').className = 'status-line waiting';
+  // Show share button on mobile
+  if(navigator.share) document.getElementById('share-btn').style.display='block';
+  switchScreen('screen-room');
+  renderHostPlayers();
+}
+
+function showJoinRoom(){
+  document.getElementById('room-host').style.display='none';
+  document.getElementById('room-join').style.display='flex';
+  document.getElementById('join-conn').style.display='block';
+  document.getElementById('join-error').style.display='none';
+  document.getElementById('join-players').style.display='none';
+  document.getElementById('join-status').style.display='none';
+  switchScreen('screen-room');
+}
+
+function renderHostPlayers(){
+  const connected = players.filter(p=>p.connected).length;
+  const el = document.getElementById('host-players');
+  el.innerHTML = players.map(p=>`<div class="player-row"><div class="player-dot ${p.id===myId?'host':''}"></div><span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span></div>`).join('');
+  
+  if(connected >= 2){
+    document.getElementById('host-status').textContent = `${connected} players — ready to deploy`;
+    document.getElementById('host-status').className = 'status-line ready';
+  }
+}
+
+function renderJoinPlayers(){
+  const el = document.getElementById('join-players');
+  el.innerHTML = players.map(p=>`<div class="player-row"><div class="player-dot ${p.id===myId?'host':''}"></div><span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span></div>`).join('');
+}
+
+function copyCode(){
+  navigator.clipboard.writeText(roomCode).then(()=>{
+    D('Code copied!');
+  }).catch(()=>{
+    // Fallback: select the text
+    const el = document.getElementById('room-code');
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    D('Code selected — copy it');
+  });
+}
+
+function shareCode(){
+  if(navigator.share){
+    navigator.share({
+      title: 'Waypoint Zero',
+      text: `Join my Waypoint Zero mission! Room code: ${roomCode}\nOpen https://aristosuter-bit.github.io/waypoint-zero/`,
+    }).catch(()=>{});
+  }
+}
+
+function leaveRoom(){
+  if(ws){ ws.close(); ws=null; }
+  players = []; isHost = false;
+  switchScreen('screen-lobby');
+}
+
+function hostStartMission(){
+  broadcast({type:'host_deploy'});
+  deployMission();
 }
 
 // ======== WEBSOCKET ========
 function connectWS(){
   const wsUrl = API.replace('https://','wss://');
-  try{
-    ws = new WebSocket(`${wsUrl}/ws/${roomCode}/${myId}`);
-  }catch(e){
-    D('WS create err: '+e.message);
-    return;
-  }
+  try{ ws = new WebSocket(`${wsUrl}/ws/${roomCode}/${myId}`); }
+  catch(e){ D('WS err: '+e.message); return; }
 
   ws.onopen = () => {
-    D('Connected to room '+roomCode);
-    updateConnUI('connected','Connected');
-    // Send join
-    ws.send(JSON.stringify({type:'join', name:callsign, team:gameMode==='pvp'?(isHost?'alpha':'bravo'):'alpha', role:'operative'}));
+    D('Connected');
+    document.getElementById('conn-ind').textContent = '● Connected';
+    document.getElementById('join-conn').textContent = '● Connected';
+    document.getElementById('join-conn').style.color = '#0f0';
+    ws.send(JSON.stringify({type:'join', name:callsign, team:'alpha', role:'operative'}));
   };
 
   ws.onmessage = (e) => {
     const d = JSON.parse(e.data);
-
-    if(d.type==='joined'){
-      D('Joined room');
-      if(isHost){
-        // Host gets initial player list
-        players = [{id:myId,name:callsign,team:'alpha',connected:true}];
-        updateHostStatus();
-      }
-    }
+    if(d.type==='joined'){ D('Room joined'); }
     else if(d.type==='player_joined'){
-      // Add new player
       if(!players.find(p=>p.id===d.player_id)){
         players.push({...d.info, id:d.player_id, connected:true});
       }
-      if(isHost) updateHostStatus();
+      if(isHost) renderHostPlayers();
       else {
-        showJoinerLobby(d.info?.name||'Unknown');
-        // Show player list
-        document.getElementById('join-player-list').innerHTML = players.map(p=>
-          `<div class="player-row">
-            <div class="player-dot ${p.id===myId?'you':''}"></div>
-            <span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span>
-          </div>`
-        ).join('');
+        document.getElementById('join-conn').style.display='none';
+        document.getElementById('join-players').style.display='block';
+        document.getElementById('join-status').style.display='block';
+        renderJoinPlayers();
       }
       D(d.info?.name+' joined');
     }
     else if(d.type==='player_left'){
       players = players.filter(p=>p.id!==d.player_id);
-      if(isHost) updateHostStatus();
-      else{
-        document.getElementById('join-player-list').innerHTML = players.map(p=>
-          `<div class="player-row"><div class="player-dot ${p.id===myId?'you':''}"></div><span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span></div>`
-        ).join('');
-      }
+      if(isHost) renderHostPlayers();
+      else renderJoinPlayers();
     }
     else if(d.type==='positions'){
-      // Update teammate positions
       const pos = d.positions;
       players.forEach(p=>{ if(pos[p.id]){ p.lat=pos[p.id].lat; p.lng=pos[p.id].lng; } });
       if(STATE.missionActive) updateTeammateMarkers();
@@ -437,50 +394,25 @@ function connectWS(){
       if(d.player_id!==myId) captureWP(d.wp_index);
     }
     else if(d.type==='photo_tag'){
-      if(d.target===myId){ STATE.score=Math.max(0,STATE.score-d.points); D('TAGGED -'+d.points+'pts'); }
+      if(d.target===myId){ STATE.score=Math.max(0,STATE.score-d.points); D('TAGGED -'+d.points); }
     }
     else if(d.type==='host_deploy'){
-      // Host started the mission — joiners deploy too
-      deploySolo();
+      deployMission();
     }
-    else if(d.type==='pong'){}
   };
 
   ws.onclose = () => {
-    updateConnUI('disconnected','Disconnected');
-    if(isHost) updateHostStatus();
+    document.getElementById('conn-ind').textContent = '● Disconnected';
+    if(isHost) renderHostPlayers();
+    else { document.getElementById('join-error').style.display='block'; document.getElementById('join-error').textContent='Connection lost.'; }
   };
   ws.onerror = () => {
-    if(isHost) updateConnUI('disconnected','Connection error');
-    else {
-      document.getElementById('join-conn').style.display='none';
-      document.getElementById('join-error').style.display='block';
-      document.getElementById('join-error').textContent = 'Connection failed. Check the room code.';
-    }
+    if(!isHost){ document.getElementById('join-conn').style.display='none'; document.getElementById('join-error').style.display='block'; document.getElementById('join-error').textContent='Wrong code or host offline.'; }
   };
 }
 
-function updateConnUI(state, text){
-  const dot = document.getElementById('conn-dot');
-  const txt = document.getElementById('conn-text');
-  if(dot) dot.className = 'conn-dot '+state;
-  if(txt) txt.textContent = text;
-}
-
-function broadcast(data){
-  if(ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(data));
-}
-function sendPosition(){
-  if(ws&&ws.readyState===WebSocket.OPEN&&STATE.gpsLat){
-    ws.send(JSON.stringify({type:'position',lat:STATE.gpsLat,lng:STATE.gpsLng}));
-  }
-}
-
-function leaveRoom(){
-  if(ws) ws.close();
-  ws=null; players=[]; isHost=false;
-  switchScreen('screen-lobby');
-}
+function broadcast(d){ if(ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(d)); }
+function sendPosition(){ if(ws&&ws.readyState===WebSocket.OPEN&&STATE.gpsLat) ws.send(JSON.stringify({type:'position',lat:STATE.gpsLat,lng:STATE.gpsLng})); }
 
 // ======== SENSORS ========
 function requestSensors(){
@@ -493,29 +425,28 @@ function requestSensors(){
   }else{ startGPS(); startCompass(); }
 }
 
-// ======== TONE.JS AMBIENT ========
-let scoreActive=false;
+// ======== TONE.JS ========
+let scoreOn=false;
 function startScore(){
-  if(scoreActive)return;scoreActive=true;
+  if(scoreOn)return;scoreOn=true;
   const pad=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},envelope:{attack:1.5,decay:2,sustain:.3,release:3}}).toDestination();
-  const reverb=new Tone.Reverb({decay:4,wet:.4}).toDestination();pad.connect(reverb);pad.volume.value=-26;
+  const rv=new Tone.Reverb({decay:4,wet:.4}).toDestination();pad.connect(rv);pad.volume.value=-26;
   new Tone.Pattern((t,n)=>{pad.triggerAttackRelease(n,'4n',t,.1);},['D3','F3','A3','E4'],'random').start(0);
   Tone.Transport.bpm.value=50;Tone.Transport.start();
-  window._score={pad,reverb};
-  const bass=new Tone.MembraneSynth({pitchDecay:.1,octaves:2,volume:-20}).toDestination();
-  const bp=new Tone.Pattern((t)=>{bass.triggerAttackRelease('D2','16n',t,.3);},[0],'random').start(0);bp.interval='2n';
-  window._bass={synth:bass,pattern:bp};
+  window._sc={pad,rv};
+  const bs=new Tone.MembraneSynth({pitchDecay:.1,octaves:2,volume:-20}).toDestination();
+  const bp=new Tone.Pattern((t)=>{bs.triggerAttackRelease('D2','16n',t,.3);},[0],'random').start(0);bp.interval='2n';
+  window._bs={synth:bs,pattern:bp};
 }
-function setToneTension(l){
-  if(!window._score)return;
-  window._score.pad.volume.rampTo(-26+l*10,2);
-  window._score.reverb.wet.rampTo(.3+l*.4,2);
+function setTension(l){
+  if(!window._sc)return;
+  window._sc.pad.volume.rampTo(-26+l*10,2);window._sc.rv.wet.rampTo(.3+l*.4,2);
   Tone.Transport.bpm.rampTo(50+l*40,2);
-  if(window._bass){window._bass.synth.volume.rampTo(-20+l*12,2);window._bass.pattern.interval=l>.5?'4n':'2n';}
+  if(window._bs){window._bs.synth.volume.rampTo(-20+l*12,2);window._bs.pattern.interval=l>.5?'4n':'2n';}
 }
-function stopScore(){if(!scoreActive)return;scoreActive=false;Tone.Transport.stop();if(window._score){window._score.pad.dispose();window._score.reverb.dispose();}if(window._bass){window._bass.synth.dispose();window._bass.pattern.dispose();}}
+function stopScore(){if(!scoreOn)return;scoreOn=false;Tone.Transport.stop();if(window._sc){window._sc.pad.dispose();window._sc.rv.dispose();}if(window._bs){window._bs.synth.dispose();window._bs.pattern.dispose();}}
 
-// ======== VOICE (Edge TTS) ========
+// ======== VOICE ========
 let curAudio=null;
 async function speak(text,urgency=0){
   try{
@@ -554,23 +485,21 @@ function startCompass(){
   setTimeout(()=>{if(!got){document.getElementById('heading-debug').textContent='COMPASS: tap UNLOCK';document.getElementById('heading-debug').style.color='#600';}},3000);
 }
 
-// MATH
 function bearing(l1,ln1,l2,ln2){const φ1=l1*Math.PI/180,φ2=l2*Math.PI/180,Δλ=(ln2-ln1)*Math.PI/180;const y=Math.sin(Δλ)*Math.cos(φ2),x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);return((Math.atan2(y,x)*180/Math.PI)+360)%360;}
 function dist(l1,ln1,l2,ln2){const R=6371000,φ1=l1*Math.PI/180,φ2=l2*Math.PI/180,Δφ=(l2-l1)*Math.PI/180,Δλ=(ln2-ln1)*Math.PI/180;const a=Math.sin(Δφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 
 // ======== DEPLOY ========
-async function deploySolo(){
+async function deployMission(){
   document.getElementById('brief-op').textContent='FETCHING...';
-  document.getElementById('brief-obj').textContent='Requesting satellite intel...';
-  switchScreen('screen-briefing');
-  startScore();
+  document.getElementById('brief-obj').textContent='Satellite intel...';
+  switchScreen('screen-briefing');startScore();
 
   try{
     const lat=STATE.gpsLat||47.3312,lng=STATE.gpsLng||9.4105;
     const r=await fetch(`${API}/mission?lat=${lat}&lng=${lng}&waypoints=4`);
     if(!r.ok)throw new Error('HTTP '+r.status);
     const m=await r.json();
-    STATE.missionId=m.mission_id;STATE.waypoints=m.waypoints;STATE._threat=m.threat_level;
+    STATE.missionId=m.mission_id;STATE.waypoints=m.waypoints;
     document.getElementById('brief-op').textContent=m.mission_id;
     document.getElementById('brief-obj').textContent=m.objective;
     document.getElementById('brief-threat').textContent=m.threat_level;
@@ -578,7 +507,7 @@ async function deploySolo(){
     const mapEl=document.getElementById('brief-map');
     if(m.player_location_name)mapEl.innerHTML='<div style="color:#6f6;font-size:10px;font-weight:900;margin-bottom:4px">◆ SATELLITE: REAL LOCATIONS</div><div style="color:#0a0;font-size:8px">SECTOR: '+m.player_location_name+'</div>';
   }catch(e){
-    D('Mission err: '+e.message);
+    D('Mission: '+e.message);
     STATE.missionId='NIGHTFALL-'+Math.random().toString(36).slice(2,5).toUpperCase();
     STATE.waypoints=genFallback();
     document.getElementById('brief-op').textContent=STATE.missionId;
@@ -632,17 +561,17 @@ function updateNav(){
   document.getElementById('compass-arrow').style.transform=`translate(-50%,-100%) rotate(${rel}deg)`;
   document.getElementById('compass-ring').style.transform=`rotate(${-STATE.heading}deg)`;
   updateTeammateMarkers();
-  const dEl=document.getElementById('distance');
-  if(d<20){dEl.textContent='ARR';dEl.style.color='#0f0';}else{dEl.textContent=Math.round(d);dEl.style.color=d<100?'#0f0':'#0a0';}
+  const el=document.getElementById('distance');
+  if(d<20){el.textContent='ARR';el.style.color='#0f0';}else{el.textContent=Math.round(d);el.style.color=d<100?'#0f0':'#0a0';}
   const dirs=['AHEAD','SLIGHT RIGHT','RIGHT','HARD RIGHT','BEHIND','HARD LEFT','LEFT','SLIGHT LEFT'];
   document.getElementById('bearing-label').textContent=dirs[Math.round(rel/45)%8];
   document.getElementById('wp-name').textContent=wp.name;
   document.getElementById('wp-intel').textContent=wp.intel||'';
-  const tension=d<30?1:d<60?.7:d<120?.4:d<250?.15:.03;setToneTension(tension);
+  const tension=d<30?1:d<60?.7:d<120?.4:d<250?.15:.03;setTension(tension);
   if(Math.abs(d-STATE.lastBreathDist)>8){STATE.lastBreathDist=d;updateBreathUI();}
   if(d<25&&document.getElementById('photo-btn').style.display==='none'){document.getElementById('photo-btn').style.display='block';speak('Target acquired.',.7);}
-  const now=Date.now(),interval=d<50?7000:d<150?12000:16000;
-  if(now-STATE.lastNavCall>interval&&d>15){STATE.lastNavCall=now;const urg=d<50?.6:d<150?.25:0;const t=wp.nav_text;if(t&&d>30)speak(t,urg);else speak(`${Math.round(d)}m ${dirs[Math.round(rel/45)%8].toLowerCase()}.`,urg);}
+  const now=Date.now(),iv=d<50?7000:d<150?12000:16000;
+  if(now-STATE.lastNavCall>iv&&d>15){STATE.lastNavCall=now;const u=d<50?.6:d<150?.25:0;const t=wp.nav_text;if(t&&d>30)speak(t,u);else speak(`${Math.round(d)}m ${dirs[Math.round(rel/45)%8].toLowerCase()}.`,u);}
 }
 
 function updateBreathUI(){
@@ -665,8 +594,7 @@ function updateTeammateMarkers(){
     const d=dist(STATE.gpsLat,STATE.gpsLng,p.lat,p.lng);if(d>500)return'';
     const b=bearing(STATE.gpsLat,STATE.gpsLng,p.lat,p.lng),rel=((b-STATE.heading)+720)%360;
     const rr=Math.min(d/500*rad,rad*.85),x=cx+Math.sin(rel*Math.PI/180)*rr,y=cy-Math.cos(rel*Math.PI/180)*rr;
-    const col=p.team==='bravo'?'#f44':'#0f0';
-    return`<div class="tm-marker" style="left:${x}px;top:${y}px;background:${col};box-shadow:0 0 5px ${col}" title="${p.name} · ${Math.round(d)}m"></div>`;
+    return`<div class="tm-marker" style="left:${x}px;top:${y}px;background:#0f0;box-shadow:0 0 5px #0f0" title="${p.name} · ${Math.round(d)}m"></div>`;
   }).join('');
 }
 
@@ -680,7 +608,7 @@ function takePhoto(){switchScreen('screen-camera');const v=document.getElementBy
 function capturePhoto(){const v=document.getElementById('camera-video');const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||480;c.getContext('2d').drawImage(v,0,0);const d=c.toDataURL('image/jpeg',.8);const s=v.srcObject;if(s)s.getTracks().forEach(t=>t.stop());processPhoto(d);}
 function processPhoto(dataUrl){
   const wp=STATE.waypoints[STATE.currentWP];const d=STATE.gpsLat?dist(STATE.gpsLat,STATE.gpsLng,wp.lat,wp.lng):0;
-  if(d<50||!STATE.gpsLat){const bonus=Math.max(0,100-Math.round(d));STATE.score+=wp.points+bonus;STATE.photos.push(dataUrl);document.getElementById('wp-dot-'+STATE.currentWP).classList.add('done');document.getElementById('wp-dot-'+STATE.currentWP).classList.remove('current');STATE.currentWP++;setToneTension(0);broadcast({type:'wp_captured',wp_index:STATE.currentWP-1});if(STATE.currentWP>=STATE.waypoints.length){endMission(true);}else{document.getElementById('wp-dot-'+STATE.currentWP).classList.add('current');document.getElementById('photo-btn').style.display='none';const next=STATE.waypoints[STATE.currentWP];speak(next.nav_text||'Confirmed. '+next.name+'.');setTimeout(()=>setToneTension(.2),1500);}}else{speak(`Too far. ${Math.round(d)}m.`);}
+  if(d<50||!STATE.gpsLat){const bonus=Math.max(0,100-Math.round(d));STATE.score+=wp.points+bonus;STATE.photos.push(dataUrl);document.getElementById('wp-dot-'+STATE.currentWP).classList.add('done');document.getElementById('wp-dot-'+STATE.currentWP).classList.remove('current');STATE.currentWP++;setTension(0);broadcast({type:'wp_captured',wp_index:STATE.currentWP-1});if(STATE.currentWP>=STATE.waypoints.length){endMission(true);}else{document.getElementById('wp-dot-'+STATE.currentWP).classList.add('current');document.getElementById('photo-btn').style.display='none';const next=STATE.waypoints[STATE.currentWP];speak(next.nav_text||'Confirmed. '+next.name+'.');setTimeout(()=>setTension(.2),1500);}}else{speak(`Too far. ${Math.round(d)}m.`);}
   switchScreen('screen-mission');
 }
 function closeCamera(){const s=document.getElementById('camera-video').srcObject;if(s)s.getTracks().forEach(t=>t.stop());switchScreen('screen-mission');}
@@ -699,7 +627,6 @@ function endMission(success){
 
 function switchScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
-// Init: check stored sensor permission
 if(localStorage.getItem('wz_sensors')==='granted'){startGPS();startCompass();}
 </script>
 </body>

@@ -88,6 +88,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .prologue .prologue-text.dim{color:#050}
 .prologue .prologue-btn{opacity:0;transition:opacity 2s;margin-top:20px}
 .prologue .prologue-btn.visible{opacity:1}
+.prologue .skip-btn{position:fixed;bottom:24px;right:16px;z-index:10;opacity:.5;transition:opacity .3s}
+.prologue .skip-btn:active{opacity:1}
 
 /* ====== CALLSIGN ====== */
 .callsign{gap:24px}
@@ -257,6 +259,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div class="prologue-btn" id="prologue-btn-area">
     <button class="btn primary" id="prologue-btn" onclick="handlePrologueTap()"><span class="label">TAP TO BEGIN</span></button>
   </div>
+  <button class="btn ghost small skip-btn" id="skip-btn" onclick="skipPrologue()" style="display:none">SKIP ▸</button>
 </div>
 
 <!-- ====== CALLSIGN ====== -->
@@ -444,7 +447,8 @@ let S = {
   lastNavCall:0, lastBreathDist:9999, packId:null, packName:null,
   tensionLevel:0, lastTension:0, voiceMode:'tactical', goTriggered:false,
   mode:'solo', // solo | team | training
-  generated:false, targetDist:0, timeLimit:0
+  generated:false, targetDist:0, timeLimit:0,
+  lastNarrativeTime:0, narrativeCount:0, narrativeHistory:[]
 };
 
 // ======== AUDIO ENGINE ========
@@ -651,6 +655,7 @@ function updateVoiceDot(mode){
 
 // ======== PROLOGUE ========
 let prologueUnlocked = false;
+let prologueCancelled = false;
 
 async function startPrologue(){
   // Don't play audio until user taps
@@ -665,6 +670,11 @@ async function finishPrologue(){
     await unlockAudio();
   }
   
+  prologueCancelled = false;
+  
+  // Show skip button
+  document.getElementById('skip-btn').style.display = 'block';
+  
   const el = document.getElementById('prologue-text');
   const btnArea = document.getElementById('prologue-btn-area');
   btnArea.classList.remove('visible');
@@ -672,35 +682,45 @@ async function finishPrologue(){
   // SUSPENSE: static burst → heartbeat → text
   playStatic(0.4, 0.08);
   await sleep(300);
+  if(prologueCancelled) return;
   setHeartbeat(42, .35);
   await sleep(600);
+  if(prologueCancelled) return;
   
   el.textContent = 'INCOMING TRANSMISSION…';
   playStatic(0.3, 0.04);
   await sleep(1800);
+  if(prologueCancelled) return;
   
   el.textContent = 'CLASSIFIED';
   await sleep(1200);
+  if(prologueCancelled) return;
   
   el.textContent = '...';
   setHeartbeat(48, .4);
   await sleep(2000);
+  if(prologueCancelled) return;
   
   el.textContent = 'You\'re early.';
   await sleep(2000);
+  if(prologueCancelled) return;
   
   el.textContent = 'Good.';
   await sleep(1200);
+  if(prologueCancelled) return;
   
   el.textContent = 'Put your headphones on.';
   await sleep(2800);
+  if(prologueCancelled) return;
   
   el.textContent = 'Take a walk.';
   setHeartbeat(52, .35);
   await sleep(2000);
+  if(prologueCancelled) return;
   
   el.textContent = 'We have a lot to cover.';
   await sleep(2800);
+  if(prologueCancelled) return;
   
   // Voice line
   try {
@@ -712,8 +732,17 @@ async function finishPrologue(){
   } catch(e){ D('Prologue voice: '+e.message); }
   
   el.textContent = 'Are you in?';
+  document.getElementById('skip-btn').style.display = 'none';
   btnArea.classList.add('visible');
   btnArea.querySelector('button .label').textContent = 'I\'M IN';
+}
+
+function skipPrologue(){
+  prologueCancelled = true;
+  document.getElementById('skip-btn').style.display = 'none';
+  setHeartbeat(0, 0); // stop heartbeat
+  prologueUnlocked = true;
+  goToCallsign();
 }
 
 function goToCallsign(){
@@ -1025,10 +1054,26 @@ function genFallback(){
 async function pickDistance(km){
   const timeLimits = {1:720, 2:1500, 5:3600, 10:7200}; // seconds
   const objectives = {
-    1: ['Sprint recon — extract intel and return to base', 'Rapid sweep — locate the beacon before window closes', 'Flash patrol — map the sector under pressure'],
-    2: ['Perimeter sweep — identify all entry points', 'Patrol route — scout and report anomalies', 'Grid search — sweep for hidden caches'],
-    5: ['Deep recon — navigate the full circuit and document everything', 'Extended patrol — cover the sector, mark waypoints', 'Long-range scout — endurance run through hostile terrain'],
-    10: ['Endurance trial — complete the circuit before extraction window closes', 'Marathon recon — full sector sweep under time pressure', 'Iron patrol — no support, no extraction. Finish or fail.']
+    1: [
+      'A defector is waiting with evidence that could prevent the attack. 12 minutes before they scrub the meet. Get there.',
+      'Emergency beacon activated. Civilian trapped in the old district. You\'re the closest asset. Extract them.',
+      'The courier dropped the package and ran. It\'s sitting in a dead drop. Retrieve it before the cleanup crew finds it.'
+    ],
+    2: [
+      'Someone\'s been leaving coded messages on the walls of the old quarter. Photograph and decode them. 25 minute window.',
+      'A listening post went silent at 0400. Sweep the perimeter, find out what happened, report back.',
+      'They\'re moving something through the sector tonight. Shadow the route, identify the package, do not engage.'
+    ],
+    5: [
+      'The grid is compromised. Five relay points need manual reset before the next transmission window closes. Move fast.',
+      'A whistleblower is leaving a trail of evidence across the district. Follow the markers. Collect everything. Don\'t get followed.',
+      'Deep patrol. Something\'s been digging under the old industrial zone. Thermal scans are off the charts. Investigate.'
+    ],
+    10: [
+      'This is the one. Full circuit. If you finish, we get the proof we need. If you don\'t, the operation goes dark. No extraction. No backup. Just you.',
+      'They said this sector was clean. It\'s not. Ten kilometers of hostile ground. Every step brings us closer to the truth. Don\'t stop.',
+      'Endurance trial. The last operative didn\'t make it back. We need to know what they found. Complete the circuit. Bring home the intel.'
+    ]
   };
   
   S.targetDist = km * 1000;
@@ -1236,6 +1281,7 @@ function deployMission(){
   S.lastNavCall = 0; S.lastBreathDist = 9999;
   S.tensionLevel = 0; S.lastTension = 0;
   S.goTriggered = false; S.voiceMode = 'tactical';
+  S.lastNarrativeTime = Date.now(); S.narrativeCount = 0; S.narrativeHistory = [];
 
   // Use dynamic time limit for generated missions, default 20min otherwise
   const timeLimit = S.generated ? S.timeLimit : 1200;
@@ -1392,7 +1438,102 @@ function updateNav(){
 
   updateTeammateMarkers();
   updateMinimap();
+  
+  // Narrative beats for generated missions
+  if(S.generated) checkNarrativeBeat();
 }
+
+// ====== NARRATIVE ENGINE ======
+function checkNarrativeBeat(){
+  const now = Date.now();
+  const elapsed = now - S.startTime;
+  const total = S.timeLimit * 1000;
+  const progress = Math.min(1, elapsed / total);
+  
+  // Trigger every 2-4 minutes, but only when not near a turn
+  const interval = progress > .7 ? 90000 : progress > .4 ? 120000 : 150000;
+  if(now - S.lastNarrativeTime < interval) return;
+  if(S.narrativeCount > 20) return; // cap
+  
+  S.lastNarrativeTime = now;
+  S.narrativeCount++;
+  
+  const beat = pickNarrativeBeat(progress);
+  if(!beat) return;
+  
+  // Only speak narrative beats — don't overwrite navigation
+  const wp = S.waypoints[S.currentWP];
+  if(!wp) return;
+  const d = S.lat ? dist(S.lat, S.lng, wp.lat, wp.lng) : 999;
+  if(d < 40) return; // don't interrupt when close to turn
+  
+  S.narrativeHistory.push(beat);
+  const mode = progress > .8 ? 'alert' : progress > .5 ? 'tactical' : 'whisper';
+  speak(beat, mode);
+}
+
+function pickNarrativeBeat(progress){
+  const all = NARRATIVE_POOL;
+  // Weight by phase: early picks from front, late from back
+  const poolIdx = Math.floor(progress * all.length);
+  const pool = all[Math.min(poolIdx, all.length - 1)];
+  if(!pool || pool.length === 0) return null;
+  
+  // Don't repeat recent beats
+  const recent = S.narrativeHistory.slice(-5);
+  const available = pool.filter(b => !recent.includes(b));
+  if(available.length === 0) return pool[Math.floor(Math.random() * pool.length)];
+  
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+const NARRATIVE_POOL = [
+  // Phase 0: Mission start — intel, scene-setting
+  [
+    "Satellite's picking up heat signatures three blocks ahead. Could be nothing. Could be not nothing.",
+    "I've been watching this sector for two weeks. Something changed tonight. Can't put my finger on it.",
+    "The radio just crackled. Encrypted. Short burst. Someone's close.",
+    "Intel update: a civilian reported strange lights near the old quarter an hour ago. Might be unrelated. Might not.",
+    "There's a CCTV blind spot coming up on your left. If you need to disappear for a moment, that's where.",
+    "The last operative who ran this route — she found something. Never told us what. Her report was redacted.",
+  ],
+  // Phase 1: Early — discovery, atmosphere
+  [
+    "You're passing the old district now. Most of these buildings predate the war. They've seen worse than tonight.",
+    "Thermal scan shows an anomaly in the structure ahead. Empty — but recently occupied. Someone left in a hurry.",
+    "I pulled the archives on this area. In 1987, a fire took out half the block. They never found what caused it.",
+    "Look up. The church spire. It's been standing since 1420. It's seen empires rise and fall. Tonight's just another shift change.",
+    "There's a plaque on the wall to your right. Memorial for the workers who died building the railway. Say their names if you get close.",
+    "This street used to be the main trade route. Salt, silk, secrets. Nothing's changed.",
+  ],
+  // Phase 2: Mid — tension building, discoveries
+  [
+    "I'm picking up movement. Two — no, three heat signatures. Parallel to your route. Keeping pace.",
+    "There's an old bunker entrance fifty meters to your left. Sealed since '45. Or at least, it was supposed to be.",
+    "The street names here — they were changed three times in the last century. Each regime wanted to erase the one before. The stones remember.",
+    "Drones. Quiet, high altitude. Can't tell whose. Stay close to the buildings.",
+    "That construction site ahead — it was supposed to be a school. Funding disappeared. Now it's just a hole in the ground. Some say it's not empty at night.",
+    "I found a photograph in the archives. This exact intersection. 1943. A woman standing right where you are now. She was a courier. Never made it home.",
+  ],
+  // Phase 3: Late — stakes, urgency, revelations
+  [
+    "HQ just went dark. I've lost contact with the operations desk. You're on your own until I can re-establish.",
+    "They're sweeping the perimeter. Grid pattern. Methodical. You have maybe eight minutes before they reach your position.",
+    "I decoded the last transmission. It's not just surveillance. They're looking for something specific. Something buried.",
+    "The extraction window is closing. If you don't complete the circuit in time, you're spending the night out here. And it gets cold.",
+    "An encrypted file just unlocked in the archive. It's a map. It shows tunnels under the district. Tunnels that don't appear on any official record.",
+    "This is it. The last stretch. Everything we've been building toward. Don't think. Just move.",
+  ],
+  // Phase 4: Final — crescendo
+  [
+    "I can see you on the satellite feed. You're almost there. One more push.",
+    "They know you're close to something. They're converging. Every second counts now.",
+    "If you make it — if we make it — this changes everything. The proof we need. Right there. Go.",
+    "The last operative didn't make it back. But you're not the last operative. Finish this.",
+    "I've got your extraction point on scope. Green light. Bring it home.",
+    "Whatever happens in the next three minutes — it's been an honor.",
+  ]
+];
 
 // ====== WHISPER → GO! SEQUENCE ======
 function checkTensionTrigger(){

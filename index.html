@@ -37,6 +37,13 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .divider{width:100%;max-width:260px;border-top:1px solid #030;margin:8px 0;position:relative}
 .divider span{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:#000;padding:0 10px;font-size:7px;color:#050;letter-spacing:.1em}
 
+/* ====== INTENSITY SELECTOR ====== */
+.intensity-row{display:flex;gap:4px;max-width:260px;width:100%}
+.intensity-btn{flex:1;background:rgba(0,15,0,.2);border:1px solid #030;color:#060;padding:6px 0;font-size:9px;font-family:inherit;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:.15s}
+.intensity-btn.selected{background:rgba(0,30,0,.5);border-color:#0a0;color:#0f0;box-shadow:0 0 6px rgba(0,255,0,.1)}
+.intensity-btn .isub{display:block;font-size:6px;color:#040;letter-spacing:.12em;margin-top:2px}
+.intensity-btn.selected .isub{color:#050}
+
 /* ====== ROOM LOBBY ====== */
 .room-lobby{align-items:center;justify-content:center;text-align:center;gap:8px}
 .room-code{font-size:42px;font-weight:900;letter-spacing:.4em;color:#0f0;text-shadow:0 0 25px #0f0,0 0 50px #0a0;padding:10px 20px;border:1px dashed #0a0;margin:4px 0}
@@ -116,6 +123,37 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .stats{font-size:8px;color:#050;line-height:1.8}
 .photos img{width:44px;height:44px;object-fit:cover;border:1px solid #0a0;border-radius:2px}
 
+/* ====== DEBRIEF CARD ====== */
+.debrief-card{background:rgba(0,15,0,.15);border:1px solid #0a0;padding:16px 20px;max-width:320px;width:100%;text-align:center;position:relative;overflow:hidden}
+.debrief-card::before{content:'TOP SECRET';position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:5px;letter-spacing:.4em;color:#050}
+.debrief-grade{font-size:72px;font-weight:900;line-height:1;margin:12px 0 0}
+.debrief-grade.S,.debrief-grade.A{color:#0f0;text-shadow:0 0 30px #0f0,0 0 60px #0a0}
+.debrief-grade.B{color:#ff0;text-shadow:0 0 20px #ff0}
+.debrief-grade.C{color:#f80;text-shadow:0 0 15px #f80}
+.debrief-grade.F{color:#f44;text-shadow:0 0 15px #f44}
+.debrief-grade-label{font-size:8px;color:#050;letter-spacing:.25em;margin-bottom:4px}
+.debrief-callsign{font-size:11px;color:#0f0;letter-spacing:.15em;font-weight:900;margin:2px 0}
+.debrief-location{font-size:8px;color:#0a0;letter-spacing:.1em;margin:2px 0}
+.debrief-stats{display:flex;justify-content:center;gap:16px;margin:10px 0;padding:8px 0;border-top:1px solid #030;border-bottom:1px solid #030}
+.debrief-stat{text-align:center}
+.debrief-stat .val{font-size:16px;font-weight:900;color:#0f0;line-height:1.2}
+.debrief-stat .lbl{font-size:6px;color:#050;letter-spacing:.15em}
+.debrief-team{margin:6px 0;font-size:8px;color:#0a0;letter-spacing:.08em}
+.debrief-photos{display:flex;justify-content:center;gap:4px;margin:8px 0;flex-wrap:wrap}
+.debrief-photos img{width:56px;height:56px;object-fit:cover;border:1px solid #0a0;border-radius:2px}
+.debrief-no-photos{font-size:8px;color:#050;font-style:italic;padding:8px}
+.debrief-divider{width:80%;border-top:1px dashed #030;margin:8px auto}
+
+/* ====== SHARE ====== */
+.share-row{display:flex;gap:6px;align-items:center;justify-content:center;margin:8px 0;flex-wrap:wrap}
+.btn.share{background:#0a0;color:#000;max-width:200px;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn.share:active{background:#0f0}
+.share-url-bar{background:rgba(0,15,0,.3);border:1px solid #040;color:#0a0;font-size:7px;padding:6px 8px;max-width:280px;width:100%;text-align:center;word-break:break-all;letter-spacing:.04em;margin:4px 0}
+
+/* ====== SHARED MISSION VIEW ====== */
+.shared-view{align-items:center;justify-content:center;text-align:center;gap:8px}
+.shared-header{font-size:10px;color:#0a0;letter-spacing:.2em;margin-bottom:8px}
+
 /* ====== OVERLAYS ====== */
 .voice-dot{position:fixed;top:8px;right:8px;width:5px;height:5px;border-radius:50%;background:#0f0;opacity:0;z-index:1000}
 .voice-dot.speaking{opacity:1;animation:pulse .3s infinite}
@@ -134,6 +172,13 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div class="subtitle">AUDIO FIELD TERMINAL</div>
 
   <input class="input" id="lobby-callsign" placeholder="YOUR CALLSIGN" maxlength="12" value="GHOST">
+
+  <div style="font-size:7px;color:#050;letter-spacing:.15em;margin:4px 0">MISSION INTENSITY</div>
+  <div class="intensity-row">
+    <button class="intensity-btn" id="int-walk" onclick="selectIntensity('walk')">WALK<span class="isub">25 min</span></button>
+    <button class="intensity-btn selected" id="int-jog" onclick="selectIntensity('jog')">JOG<span class="isub">20 min</span></button>
+    <button class="intensity-btn" id="int-sprint" onclick="selectIntensity('sprint')">SPRINT<span class="isub">15 min</span></button>
+  </div>
 
   <button class="btn" onclick="hostGame()">NEW GAME</button>
   <p style="font-size:8px;color:#050;margin:2px 0">Creates a room — share the code with your team</p>
@@ -228,12 +273,44 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <!-- ====== COMPLETE ====== -->
 <div class="screen complete" id="screen-complete">
   <div class="classified">■ DEBRIEF ■</div>
-  <div class="score" id="final-score">0</div>
-  <div style="font-size:10px;color:#0a0;letter-spacing:.2em">SCORE</div>
-  <div class="grade" id="final-grade"></div>
-  <div class="stats" id="final-stats"></div>
-  <div class="photos" id="final-photos"></div>
-  <button class="btn" onclick="location.reload()">NEW OP</button>
+
+  <!-- DEBRIEF CARD -->
+  <div class="debrief-card" id="debrief-card">
+    <div class="debrief-grade-label">MISSION GRADE</div>
+    <div class="debrief-grade" id="final-grade">-</div>
+    <div class="debrief-callsign" id="final-callsign"></div>
+    <div class="debrief-location" id="final-location"></div>
+
+    <div class="debrief-stats">
+      <div class="debrief-stat"><div class="val" id="final-score">0</div><div class="lbl">SCORE</div></div>
+      <div class="debrief-stat"><div class="val" id="final-wp">0/0</div><div class="lbl">WAYPOINTS</div></div>
+      <div class="debrief-stat"><div class="val" id="final-time">0:00</div><div class="lbl">TIME</div></div>
+    </div>
+
+    <div class="debrief-team" id="final-team"></div>
+    <div class="debrief-divider"></div>
+    <div class="debrief-photos" id="final-photos"></div>
+    <div id="final-no-photos" class="debrief-no-photos" style="display:none">NO FIELD PHOTOS</div>
+  </div>
+
+  <!-- SHARE -->
+  <div class="share-row">
+    <button class="btn share" id="share-debrief-btn" onclick="shareDebrief()">📤 SHARE</button>
+    <button class="btn copy" onclick="copyShareURL()">📋 COPY LINK</button>
+  </div>
+  <div class="share-url-bar" id="share-url-bar" style="display:none"></div>
+
+  <button class="btn ghost" onclick="location.reload()">NEW OP</button>
+</div>
+
+<!-- ====== SHARED MISSION VIEW ====== -->
+<div class="screen shared-view" id="screen-shared">
+  <div class="classified">■ DECLASSIFIED ■</div>
+  <div class="shared-header">WAYPOINT ZERO</div>
+  <div class="debrief-card" id="shared-card"></div>
+  <p style="font-size:8px;color:#050;margin-top:8px;text-align:center">
+    <a href="./" style="color:#0a0;text-decoration:none">▸ PLAY YOUR OWN MISSION</a>
+  </p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.min.js"></script>
@@ -249,7 +326,7 @@ let isHost = false;
 let roomCode = '';
 let ws = null;
 let players = [];
-let STATE = { missionId:'',waypoints:[],currentWP:0,score:0,startTime:0,elapsed:0,photos:[],gpsLat:null,gpsLng:null,heading:0,missionActive:false,lastNavCall:0,lastBreathDist:9999 };
+let STATE = { missionId:'',waypoints:[],currentWP:0,score:0,startTime:0,elapsed:0,photos:[],gpsLat:null,gpsLng:null,heading:0,missionActive:false,lastNavCall:0,lastBreathDist:9999,locationName:'',success:false };
 
 // ======== LOBBY ACTIONS ========
 function hostGame(){
@@ -499,7 +576,7 @@ async function deployMission(){
     const r=await fetch(`${API}/mission?lat=${lat}&lng=${lng}&waypoints=4`);
     if(!r.ok)throw new Error('HTTP '+r.status);
     const m=await r.json();
-    STATE.missionId=m.mission_id;STATE.waypoints=m.waypoints;
+    STATE.missionId=m.mission_id;STATE.waypoints=m.waypoints;STATE.locationName=m.player_location_name||'CLASSIFIED';
     document.getElementById('brief-op').textContent=m.mission_id;
     document.getElementById('brief-obj').textContent=m.objective;
     document.getElementById('brief-threat').textContent=m.threat_level;
@@ -615,17 +692,122 @@ function closeCamera(){const s=document.getElementById('camera-video').srcObject
 function abortMission(){if(confirm('ABORT?')){speak('Aborted.');endMission(false);}}
 
 function endMission(success){
-  STATE.missionActive=false;Object.values(_t).forEach(clearInterval);stopScore();
+  STATE.missionActive=false;STATE.success=success;Object.values(_t).forEach(clearInterval);stopScore();
   const tb=success?Math.max(0,600-STATE.elapsed):0,fs=success?STATE.score+tb:Math.round(STATE.score*.4);
-  let g='FAILED';if(success&&STATE.currentWP>=STATE.waypoints.length){if(fs>800)g='S';else if(fs>600)g='A';else if(fs>350)g='B';else g='C';}
+  let g='F';if(success&&STATE.currentWP>=STATE.waypoints.length){if(fs>=800)g='S';else if(fs>=600)g='A';else if(fs>=350)g='B';else if(fs>=150)g='C';else g='D';}
+  else if(success&&STATE.currentWP>0){if(STATE.currentWP>=STATE.waypoints.length*.7)g='B';else g='C';}
+  const tm=Math.floor(STATE.elapsed/60),ts=(STATE.elapsed%60).toString().padStart(2,'0');
+  const wpStr=`${STATE.currentWP}/${STATE.waypoints.length}`;
+  const tc=players.filter(p=>p.connected&&p.id!==myId).length;
+
+  // Populate debrief card
+  const ge=document.getElementById('final-grade');ge.textContent=g;ge.className='debrief-grade '+g;
+  document.getElementById('final-callsign').textContent='OPERATIVE: '+callsign;
+  document.getElementById('final-location').textContent='◆ '+STATE.locationName;
   document.getElementById('final-score').textContent=fs;
-  document.getElementById('final-grade').textContent=g;document.getElementById('final-grade').style.color=g==='S'||g==='A'?'#0f0':'#0a0';
-  document.getElementById('final-stats').innerHTML=`OP: ${STATE.missionId}<br>WP: ${STATE.currentWP}/${STATE.waypoints.length}<br>TIME: ${Math.floor(STATE.elapsed/60)}:${(STATE.elapsed%60).toString().padStart(2,'0')}`;
-  document.getElementById('final-photos').innerHTML=STATE.photos.map(p=>`<img src="${p}">`).join('');
-  switchScreen('screen-complete');speak(g==='S'?'Outstanding. '+callsign+'.':success?'Complete.':'Failed.');
+  document.getElementById('final-wp').textContent=wpStr;
+  document.getElementById('final-time').textContent=`${tm}:${ts}`;
+
+  if(tc>0)document.getElementById('final-team').innerHTML='▸ TEAM · '+tc+' TEAMMATES';
+  else document.getElementById('final-team').textContent='';
+
+  const pe=document.getElementById('final-photos');
+  if(STATE.photos.length>0){pe.innerHTML=STATE.photos.map(p=>`<img src="${p}">`).join('');document.getElementById('final-no-photos').style.display='none';}
+  else{pe.innerHTML='';document.getElementById('final-no-photos').style.display='block';}
+
+  // Generate share URL
+  window._debrief={grade:g,callsign:callsign,missionId:STATE.missionId,location:STATE.locationName,score:fs,wp:wpStr,time:`${tm}:${ts}`,teammates:tc};
+  const shareURL=generateShareURL(window._debrief);
+  document.getElementById('share-url-bar').textContent=shareURL;
+  document.getElementById('share-url-bar').style.display='block';
+  if(!navigator.share)document.getElementById('share-debrief-btn').style.display='none';
+
+  switchScreen('screen-complete');
+  speak(g==='S'?'Outstanding. '+callsign+'.':g==='A'?'Excellent work. '+callsign+'.':success?'Complete.':'Failed.');
 }
 
 function switchScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+// ======== SHARE & DEBRIEF LINK ========
+function generateShareURL(d){
+  const base='https://aristosuter-bit.github.io/waypoint-zero/';
+  const payload=[d.grade,d.callsign,d.missionId,d.location,d.score,d.wp,d.time,d.teammates].map(v=>encodeURIComponent(v)).join('|');
+  return base+'#share='+payload;
+}
+
+function parseShareHash(hash){
+  if(!hash||!hash.startsWith('#share='))return null;
+  try{
+    const parts=hash.slice(7).split('|');
+    if(parts.length<7)return null;
+    return {
+      grade:decodeURIComponent(parts[0]),
+      callsign:decodeURIComponent(parts[1]),
+      missionId:decodeURIComponent(parts[2]),
+      location:decodeURIComponent(parts[3]),
+      score:parseInt(decodeURIComponent(parts[4]))||0,
+      wp:decodeURIComponent(parts[5]),
+      time:decodeURIComponent(parts[6]),
+      teammates:parseInt(decodeURIComponent(parts[7]))||0
+    };
+  }catch(e){return null;}
+}
+
+function showSharedMission(d){
+  const ge=document.getElementById('shared-card');
+  const g=d.grade||'?';
+  ge.innerHTML=
+    '<div class="debrief-grade-label">MISSION GRADE</div>'+
+    '<div class="debrief-grade '+g+'">'+g+'</div>'+
+    '<div class="debrief-callsign">OPERATIVE: '+d.callsign+'</div>'+
+    '<div class="debrief-location">◆ '+d.location+'</div>'+
+    '<div class="debrief-stats">'+
+      '<div class="debrief-stat"><div class="val">'+d.score+'</div><div class="lbl">SCORE</div></div>'+
+      '<div class="debrief-stat"><div class="val">'+d.wp+'</div><div class="lbl">WAYPOINTS</div></div>'+
+      '<div class="debrief-stat"><div class="val">'+d.time+'</div><div class="lbl">TIME</div></div>'+
+    '</div>'+
+    (d.teammates>0?'<div class="debrief-team">▸ TEAM · '+d.teammates+' TEAMMATES</div>':'')+
+    '<div class="debrief-divider"></div>'+
+    '<div class="debrief-no-photos">[ PHOTOS CLASSIFIED ]</div>';
+  switchScreen('screen-shared');
+}
+
+async function shareDebrief(){
+  if(!navigator.share){copyShareURL();return;}
+  const d=window._debrief;
+  if(!d){D('No debrief data');return;}
+  const shareURL=generateShareURL(d);
+  const teamText=d.teammates>0?' with '+d.teammates+' teammates':'';
+  try{
+    await navigator.share({
+      title: 'Waypoint Zero: '+d.missionId,
+      text: d.callsign+' · Grade '+d.grade+' · '+d.score+' pts · '+d.location+teamText,
+      url: shareURL
+    });
+  }catch(e){/* user cancelled */}
+}
+
+function copyShareURL(){
+  const d=window._debrief;
+  if(!d){D('No debrief data');return;}
+  const shareURL=generateShareURL(d);
+  document.getElementById('share-url-bar').textContent=shareURL;
+  document.getElementById('share-url-bar').style.display='block';
+  navigator.clipboard.writeText(shareURL).then(()=>{D('Share link copied!');}).catch(()=>{
+    const el=document.getElementById('share-url-bar');
+    const range=document.createRange();
+    range.selectNodeContents(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    D('URL selected — copy it');
+  });
+}
+
+// ======== SHARED MISSION VIEW (hash reader) ========
+(function(){
+  const shared=parseShareHash(window.location.hash);
+  if(shared)showSharedMission(shared);
+})();
 
 if(localStorage.getItem('wz_sensors')==='granted'){startGPS();startCompass();}
 </script>

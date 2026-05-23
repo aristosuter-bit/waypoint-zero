@@ -449,7 +449,8 @@ let S = {
   mode:'solo', // solo | team | training
   generated:false, targetDist:0, timeLimit:0,
   lastNarrativeTime:0, narrativeCount:0, narrativeHistory:[],
-  breadcrumbs:[]
+  breadcrumbs:[],
+  gpsHeading:0, gpsHeadingTime:0
 };
 
 // ======== AUDIO ENGINE ========
@@ -1370,10 +1371,14 @@ function updateNav(){
   const wp = S.waypoints[S.currentWP];
   const d = dist(S.lat, S.lng, wp.lat, wp.lng);
   const bear = bearing(S.lat, S.lng, wp.lat, wp.lng);
-  const rel = ((bear - S.heading) + 720) % 360;
+  
+  // Use compass heading if recent, otherwise GPS-derived heading
+  const headingAge = Date.now() - (S.gpsHeadingTime || 0);
+  const useHeading = S.heading || (headingAge < 10000 ? S.gpsHeading : 0);
+  const rel = ((bear - useHeading) + 720) % 360;
 
   document.getElementById('compass-arrow').style.transform = `translate(-50%,-100%) rotate(${rel}deg)`;
-  document.getElementById('compass-ring').style.transform = `rotate(${-S.heading}deg)`;
+  document.getElementById('compass-ring').style.transform = `rotate(${-useHeading}deg)`;
 
   const distEl = document.getElementById('distance');
   if(d < 20){ distEl.textContent = 'ARR'; distEl.style.color = '#f44'; }
@@ -1638,7 +1643,9 @@ function updateTeammateMarkers(){
     const d = dist(S.lat, S.lng, p.lat, p.lng);
     if(d > 500) return '';
     const b = bearing(S.lat, S.lng, p.lat, p.lng);
-    const rel = ((b - S.heading) + 720) % 360;
+    const headingAge = Date.now() - (S.gpsHeadingTime || 0);
+    const useHeading = S.heading || (headingAge < 10000 ? S.gpsHeading : 0);
+    const rel = ((b - useHeading) + 720) % 360;
     const rr = Math.min(d/500*rad, rad*.85);
     const x = cx + Math.sin(rel*Math.PI/180)*rr;
     const y = cy - Math.cos(rel*Math.PI/180)*rr;
@@ -2052,11 +2059,24 @@ function requestSensors(){
 
 function startGPS(){
   if(!navigator.geolocation){ D('No GPS'); return; }
+  let prevLat = null, prevLng = null;
   navigator.geolocation.watchPosition(pos => {
-    S.lat = pos.coords.latitude;
-    S.lng = pos.coords.longitude;
-    document.getElementById('gps-status').textContent = '● GPS '+S.lat.toFixed(4);
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    S.lat = lat; S.lng = lng;
+    document.getElementById('gps-status').textContent = '● GPS '+lat.toFixed(4);
     document.getElementById('gps-status').style.color = '#0a0';
+    
+    // GPS-derived heading (fallback when compass unavailable)
+    if(prevLat !== null && prevLng !== null){
+      const d = dist(prevLat, prevLng, lat, lng);
+      if(d > 5){ // only trust GPS heading when moving
+        S.gpsHeading = bearing(prevLat, prevLng, lat, lng);
+        S.gpsHeadingTime = Date.now();
+      }
+    }
+    prevLat = lat; prevLng = lng;
+    
     if(S.active){ updateNav(); updateBreathUI(); sendPosition(); }
   }, e => {
     document.getElementById('gps-status').textContent = 'GPS ERR';
@@ -2066,23 +2086,31 @@ function startGPS(){
 
 function startCompass(){
   let got = false;
-  window.addEventListener('deviceorientation', e => {
+  const handler = e => {
     let h = null;
-    if(e.webkitCompassHeading !== undefined) h = e.webkitCompassHeading;
-    else if(e.alpha !== null) h = 360 - e.alpha;
+    // iOS Safari: webkitCompassHeading gives true north (0–360° clockwise)
+    if(e.webkitCompassHeading !== undefined && e.webkitCompassHeading > -1){
+      h = e.webkitCompassHeading;
+    }
+    // Android / absolute orientation: alpha=0 is north, increases clockwise
+    else if(e.absolute && e.alpha !== null && !isNaN(e.alpha)){
+      h = e.alpha % 360;
+    }
     if(h !== null && !isNaN(h)){
       S.heading = h; got = true;
-      document.getElementById('heading-debug').textContent = 'COMPASS: '+Math.round(h)+'°';
-      document.getElementById('heading-debug').style.color = '#060';
       if(S.active){ updateNav(); updateTeammateMarkers(); }
     }
-  });
+  };
+  
+  // Both listeners — whichever fires with usable data wins
+  window.addEventListener('deviceorientation', handler);
+  if('ondeviceorientationabsolute' in window){
+    window.addEventListener('deviceorientationabsolute', handler);
+  }
+  
   setTimeout(() => {
-    if(!got){
-      document.getElementById('heading-debug').textContent = 'COMPASS: tap UNLOCK';
-      document.getElementById('heading-debug').style.color = '#600';
-    }
-  }, 3000);
+    if(!got) D('Compass: no absolute heading available');
+  }, 4000);
 }
 
 // ======== MATH ========

@@ -152,15 +152,18 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .briefing .b-narrative{font-size:8px;color:#050;font-style:italic;max-width:340px;text-align:left;border-left:1px solid #030;padding-left:10px;margin:4px 0;display:none}
 .briefing .deploy-area{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:4px}
 .briefing .deploy-area .ready-text{font-size:8px;color:#040;letter-spacing:.15em;animation:slowBlink 2s infinite}
-.briefing .briefing-map{width:100%;max-width:360px;height:180px;border:1px solid #051;margin:8px 0;border-radius:2px;overflow:hidden;background:#080c08}
+.briefing .briefing-map{width:100%;max-width:none;height:40vh;max-height:350px;border:1px solid #051;margin:8px 0;border-radius:2px;overflow:hidden;background:#080c08}
 .briefing .briefing-map .leaflet-container{background:#080c08}
 .briefing .briefing-map .leaflet-control-zoom{display:none}
 .briefing .briefing-map .leaflet-control-attribution{display:none}
 
 /* ====== MISSION MINIMAP ====== */
-.mission .minimap{width:100%;max-width:300px;height:120px;border:1px solid #051;border-radius:2px;overflow:hidden;background:#080c08;margin:4px auto}
+.mission .minimap{position:absolute;inset:0;z-index:1;height:auto;max-width:none;border:none;border-radius:0;overflow:hidden;background:#080c08;margin:0}
 .mission .minimap .leaflet-container{background:#080c08}
 .mission .minimap .leaflet-control-zoom,.mission .minimap .leaflet-control-attribution{display:none}
+
+/* HUD overlays — float above full-screen map */
+.mission .m-header,.mission #heading-debug,.mission .compass-area,.mission .nav-info,.mission .tension-bar,.mission .breath-box,.mission .m-footer,.mission .alert-banner{position:relative;z-index:5}
 
 /* ====== MISSION ====== */
 .mission{padding:10px;gap:4px;justify-content:flex-start}
@@ -174,15 +177,15 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mission .alert-banner{background:rgba(255,80,0,.06);border:1px solid #600;padding:3px 10px;font-size:8px;color:#f80;letter-spacing:.1em;text-align:center;display:none;width:100%}
 .mission .alert-banner.active{display:block;animation:blink 1s infinite}
 
-.mission .compass-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:140px;max-height:200px;width:100%}
-.mission .compass-ring{width:140px;height:140px;border-radius:50%;border:2px solid #0a0;position:relative;box-shadow:0 0 12px rgba(0,255,0,.05),inset 0 0 12px rgba(0,255,0,.02);transition:transform .5s}
+.mission .compass-area{flex:none;display:flex;align-items:center;justify-content:center;position:relative;min-height:60px;max-height:80px;width:100%}
+.mission .compass-ring{width:60px;height:60px;border-radius:50%;border:2px solid #0a0;position:relative;box-shadow:0 0 12px rgba(0,255,0,.05),inset 0 0 12px rgba(0,255,0,.02);transition:transform .5s}
 .mission .compass-ring.hot{border-color:#f80;box-shadow:0 0 20px rgba(255,80,0,.1)}
 .mission .compass-ring.go-time{border-color:#f44;box-shadow:0 0 30px rgba(255,0,0,.15);animation:pulseRed .5s infinite}
 .mission .compass-n,.mission .compass-s,.mission .compass-e,.mission .compass-w{position:absolute;font-size:6px;color:#0a0;font-weight:900}
-.mission .compass-n{top:4px;left:50%;transform:translateX(-50%)}.mission .compass-s{bottom:4px;left:50%;transform:translateX(-50%);color:#020}
-.mission .compass-e{right:4px;top:50%;transform:translateY(-50%);color:#020}.mission .compass-w{left:4px;top:50%;transform:translateY(-50%);color:#020}
-.mission .compass-arrow{position:absolute;top:50%;left:50%;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:28px solid #0f0;transform:translate(-50%,-100%);filter:drop-shadow(0 0 6px #0f0);transition:transform .4s;z-index:2}
-.mission .tm-marker{position:absolute;width:5px;height:5px;border-radius:50%;transform:translate(-50%,-50%);z-index:1;transition:all .5s}
+.mission .compass-n{top:2px;left:50%;transform:translateX(-50%)}.mission .compass-s{bottom:2px;left:50%;transform:translateX(-50%);color:#020}
+.mission .compass-e{right:2px;top:50%;transform:translateY(-50%);color:#020}.mission .compass-w{left:2px;top:50%;transform:translateY(-50%);color:#020}
+.mission .compass-arrow{position:absolute;top:50%;left:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:18px solid #0f0;transform:translate(-50%,-100%);filter:drop-shadow(0 0 6px #0f0);transition:transform .4s;z-index:2}
+.mission .tm-marker{position:absolute;width:3px;height:3px;border-radius:50%;transform:translate(-50%,-50%);z-index:1;transition:all .5s}
 .mission .tm-marker::after{content:'';position:absolute;inset:-2px;border-radius:50%;opacity:.4;background:inherit}
 
 .mission .nav-info{text-align:center;padding:2px 0;width:100%}
@@ -1712,6 +1715,9 @@ function renderBriefingMap(waypoints, playerLat, playerLng){
   
   // Fit bounds
   briefingMap.fitBounds(markers, {padding:[20,20]});
+  
+  // Invalidate after render
+  setTimeout(() => { if(briefingMap) briefingMap.invalidateSize(); }, 200);
 }
 
 function initMissionMinimap(waypoints, playerLat, playerLng){
@@ -1741,18 +1747,21 @@ function initMissionMinimap(waypoints, playerLat, playerLng){
     wpMarkers.push(m);
   });
   
-  // Player marker
+  // Player marker (larger for full screen)
   const playerIcon = L.divIcon({
     className:'map-player',
-    html:'<div style="width:10px;height:10px;background:#0af;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #0af"></div>',
-    iconSize:[10,10], iconAnchor:[5,5]
+    html:'<div style="width:14px;height:14px;background:#0af;border-radius:50%;border:2px solid #fff;box-shadow:0 0 12px #0af"></div>',
+    iconSize:[14,14], iconAnchor:[7,7]
   });
   missionMarker = L.marker([playerLat, playerLng], {icon:playerIcon}).addTo(missionMap);
   
   // Fit all waypoints
   const all = waypoints.map(w => [w.lat, w.lng]);
   all.push([playerLat, playerLng]);
-  missionMap.fitBounds(all, {padding:[10,10]});
+  missionMap.fitBounds(all, {padding:[20,20]});
+  
+  // Invalidate after screen is visible
+  setTimeout(() => { if(missionMap) missionMap.invalidateSize(); }, 200);
 }
 
 function updateMinimap(){

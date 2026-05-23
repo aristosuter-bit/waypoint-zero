@@ -1253,9 +1253,20 @@ function renderHostPlayers(){
       <span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span>
     </div>`
   ).join('');
+  
+  const btn = document.getElementById('host-start-btn');
+  const status = document.getElementById('host-status');
+  
   if(connected >= 2){
-    document.getElementById('host-status').textContent = connected+' operatives — ready';
-    document.getElementById('host-status').className = 'status-line ready';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    status.textContent = connected+' operatives — ready to deploy';
+    status.className = 'status-line ready';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.35';
+    status.textContent = 'Waiting for at least one more operative…';
+    status.className = 'status-line waiting';
   }
 }
 
@@ -1273,6 +1284,11 @@ function shareCode(){
 }
 
 function hostDeploy(){
+  const connected = players.filter(p => p.connected).length;
+  if(connected < 2){
+    speak('Need at least one more operative. Share the room code.', 'tactical', true);
+    return;
+  }
   broadcast({type:'host_deploy'});
   isTraining = false;
   switchScreen('screen-briefing');

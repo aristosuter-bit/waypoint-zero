@@ -259,7 +259,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div class="prologue-btn" id="prologue-btn-area">
     <button class="btn primary" id="prologue-btn" onclick="handlePrologueTap()"><span class="label">TAP TO BEGIN</span></button>
   </div>
-  <button class="btn ghost small skip-btn" id="skip-btn" onclick="skipPrologue()" style="display:none">SKIP ▸</button>
+  <button class="btn ghost small skip-btn" id="skip-btn" onclick="skipPrologue()">SKIP ▸</button>
 </div>
 
 <!-- ====== CALLSIGN ====== -->
@@ -672,9 +672,6 @@ async function finishPrologue(){
   
   prologueCancelled = false;
   
-  // Show skip button
-  document.getElementById('skip-btn').style.display = 'block';
-  
   const el = document.getElementById('prologue-text');
   const btnArea = document.getElementById('prologue-btn-area');
   btnArea.classList.remove('visible');
@@ -737,11 +734,14 @@ async function finishPrologue(){
   btnArea.querySelector('button .label').textContent = 'I\'M IN';
 }
 
-function skipPrologue(){
+async function skipPrologue(){
   prologueCancelled = true;
   document.getElementById('skip-btn').style.display = 'none';
-  setHeartbeat(0, 0); // stop heartbeat
-  prologueUnlocked = true;
+  setHeartbeat(0, 0);
+  if(!prologueUnlocked){
+    prologueUnlocked = true;
+    await unlockAudio();
+  }
   goToCallsign();
 }
 

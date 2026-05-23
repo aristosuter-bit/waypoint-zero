@@ -83,7 +83,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 /* ====== PROLOGUE ====== */
 .prologue{background:#000;justify-content:flex-end;padding-bottom:80px}
 .prologue .static-bar{display:block}
-.prologue .prologue-text{font-size:9px;color:#030;letter-spacing:.25em;text-align:center;margin-bottom:20px;animation:slowBlink 4s infinite;max-width:280px}
+.prologue .prologue-text{font-size:12px;color:#0a0;letter-spacing:.2em;text-align:center;margin-bottom:24px;max-width:300px;min-height:24px;text-shadow:0 0 8px rgba(0,170,0,.3);transition:color .3s}
+.prologue .prologue-text.dim{color:#050}
 .prologue .prologue-btn{opacity:0;transition:opacity 2s;margin-top:20px}
 .prologue .prologue-btn.visible{opacity:1}
 
@@ -231,14 +232,14 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div class="screen active prologue" id="screen-prologue">
   <div class="prologue-text" id="prologue-text"></div>
   <div class="prologue-btn" id="prologue-btn-area">
-    <button class="btn primary" onclick="finishPrologue()"><span class="label">I'M IN</span></button>
+    <button class="btn primary" id="prologue-btn" onclick="handlePrologueTap()"><span class="label">TAP TO BEGIN</span></button>
   </div>
 </div>
 
 <!-- ====== CALLSIGN ====== -->
 <div class="screen callsign" id="screen-callsign">
   <div class="prompt" id="callsign-prompt">IDENTIFY YOURSELF</div>
-  <input class="input" id="callsign-input" placeholder="CALLSIGN" maxlength="12" value="GHOST" autocomplete="off">
+  <input class="input" id="callsign-input" placeholder="YOUR NAME" maxlength="12" value="" autocomplete="off">
   <div class="response" id="callsign-response"></div>
   <button class="btn ghost small" onclick="submitCallsign()" style="margin-top:12px">CONFIRM</button>
 </div>
@@ -377,7 +378,7 @@ function D(m){ const e=document.getElementById('debug-bar');if(e)e.textContent=m
 
 // ======== STATE ========
 let myId = Math.random().toString(36).slice(2,8);
-let callsign = 'GHOST';
+let callsign = '';
 let isHost = false, roomCode = '', ws = null, players = [], selectedPack = null;
 let isTraining = false;
 let S = {
@@ -398,7 +399,7 @@ let heartbeatBPM = 50;
 function initAudio(){
   if(audioReady) return;
   try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
-  // Heartbeat oscillator
+  // Heartbeat oscillator (don't start yet — wait for context resume)
   heartbeatNode = audioCtx.createOscillator();
   heartbeatGain = audioCtx.createGain();
   heartbeatNode.type = 'sine';
@@ -406,18 +407,37 @@ function initAudio(){
   heartbeatGain.gain.value = 0;
   heartbeatNode.connect(heartbeatGain);
   heartbeatGain.connect(audioCtx.destination);
-  heartbeatNode.start();
   audioReady = true;
 }
 
+async function unlockAudio(){
+  // Must be called from user gesture
+  if(!audioCtx) initAudio();
+  if(audioCtx && audioCtx.state === 'suspended'){
+    await audioCtx.resume();
+  }
+  // Start the heartbeat oscillator now that context is running
+  if(heartbeatNode && heartbeatNode.context && heartbeatNode.context.state === 'running'){
+    try { heartbeatNode.start(); } catch(e){ /* already started */ }
+  }
+  // Start Tone.js (safe to call multiple times)
+  try { await Tone.start(); } catch(e){ D('Tone start: '+e.message); }
+  D('Audio unlocked');
+}
+
 function setHeartbeat(bpm, volume){
-  if(!audioReady) return;
+  if(!audioReady || !audioCtx) return;
+  // Resume context if suspended (browser may suspend idle contexts)
+  if(audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => D('Heartbeat: context resumed'));
+    return; // try again next call
+  }
+  if(audioCtx.state !== 'running') return;
   heartbeatBPM = bpm;
   const now = audioCtx.currentTime;
   heartbeatGain.gain.cancelScheduledValues(now);
   heartbeatGain.gain.setValueAtTime(heartbeatGain.gain.value||0, now);
   heartbeatGain.gain.linearRampToValueAtTime(volume*.15, now+.5);
-  // Schedule the thump pattern
   scheduleHeartbeat();
 }
 
@@ -448,10 +468,33 @@ function stopHeartbeat(){
   }
 }
 
+// Radio static / atmospheric noise burst
+function playStatic(duration, vol){
+  if(!audioCtx || audioCtx.state !== 'running') return;
+  const sr = audioCtx.sampleRate;
+  const len = Math.floor(sr * duration);
+  const buf = audioCtx.createBuffer(1, len, sr);
+  const data = buf.getChannelData(0);
+  for(let i=0; i<len; i++) data[i] = (Math.random()*2-1) * 0.8;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const filt = audioCtx.createBiquadFilter();
+  filt.type = 'bandpass';
+  filt.frequency.value = 1500;
+  filt.Q.value = 0.4;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  src.connect(filt); filt.connect(gain); gain.connect(audioCtx.destination);
+  src.start(); src.stop(audioCtx.currentTime + duration);
+}
+
 // ======== TONE.JS SCORE ========
 let scoreOn = false;
-function startScore(){
+async function startScore(){
   if(scoreOn) return; scoreOn = true;
+  // Ensure Tone.js is started (safe to call multiple times)
+  try { await Tone.start(); } catch(e){ D('Tone: '+e.message); }
   const pad = new Tone.PolySynth(Tone.Synth, {
     oscillator: {type:'sine'},
     envelope: {attack:2, decay:2.5, sustain:.25, release:4}
@@ -549,34 +592,73 @@ function updateVoiceDot(mode){
 }
 
 // ======== PROLOGUE ========
+let prologueUnlocked = false;
+
 async function startPrologue(){
-  initAudio();
-  setHeartbeat(45, .3);
+  // Don't play audio until user taps
   const el = document.getElementById('prologue-text');
-  const lines = [
-    {text:'...', delay:1500},
-    {text:'You\'re early.', delay:2500},
-    {text:'Good.', delay:1500},
-    {text:'Put your headphones on.', delay:3000},
-    {text:'Take a walk.', delay:2000},
-    {text:'We have a lot to cover.', delay:3500},
-  ];
-  for(const l of lines){
-    el.textContent = l.text;
-    await sleep(l.delay);
-  }
-  // Voice line
-  try {
-    await speak("You're early. Good. Put your headphones on and take a walk. We have a lot to cover and not much time.", 'whisper');
-    await sleep(1500);
-    await speak("They've been watching this sector for weeks. But tonight, tonight they're blind. You have a window.", 'whisper');
-  } catch(e){}
-  el.textContent = 'Are you in?';
+  el.textContent = 'TAP TO BEGIN';
   document.getElementById('prologue-btn-area').classList.add('visible');
 }
 
-function finishPrologue(){
-  initAudio();
+async function finishPrologue(){
+  if(!prologueUnlocked){
+    prologueUnlocked = true;
+    await unlockAudio();
+  }
+  
+  const el = document.getElementById('prologue-text');
+  const btnArea = document.getElementById('prologue-btn-area');
+  btnArea.classList.remove('visible');
+  
+  // SUSPENSE: static burst → heartbeat → text
+  playStatic(0.4, 0.08);
+  await sleep(300);
+  setHeartbeat(42, .35);
+  await sleep(600);
+  
+  el.textContent = 'INCOMING TRANSMISSION…';
+  playStatic(0.3, 0.04);
+  await sleep(1800);
+  
+  el.textContent = 'CLASSIFIED';
+  await sleep(1200);
+  
+  el.textContent = '...';
+  setHeartbeat(48, .4);
+  await sleep(2000);
+  
+  el.textContent = 'You\'re early.';
+  await sleep(2000);
+  
+  el.textContent = 'Good.';
+  await sleep(1200);
+  
+  el.textContent = 'Put your headphones on.';
+  await sleep(2800);
+  
+  el.textContent = 'Take a walk.';
+  setHeartbeat(52, .35);
+  await sleep(2000);
+  
+  el.textContent = 'We have a lot to cover.';
+  await sleep(2800);
+  
+  // Voice line
+  try {
+    await speak("You're early. Good. Put your headphones on and take a walk. We have a lot to cover and not much time.", 'whisper');
+    setHeartbeat(55, .4);
+    await sleep(1500);
+    await speak("They've been watching this sector for weeks. But tonight, tonight they're blind. You have a window.", 'whisper');
+    setHeartbeat(60, .45);
+  } catch(e){ D('Prologue voice: '+e.message); }
+  
+  el.textContent = 'Are you in?';
+  btnArea.classList.add('visible');
+  btnArea.querySelector('button .label').textContent = 'I\'M IN';
+}
+
+function goToCallsign(){
   document.getElementById('static-bar').classList.remove('active');
   switchScreen('screen-callsign');
   document.getElementById('callsign-input').focus();
@@ -585,10 +667,27 @@ function finishPrologue(){
   }, 600);
 }
 
+let prologuePhase = 0;
+function handlePrologueTap(){
+  if(prologuePhase === 0){
+    prologuePhase = 1;
+    finishPrologue();
+  } else {
+    goToCallsign();
+  }
+}
+
 // ======== CALLSIGN ========
 function submitCallsign(){
   const input = document.getElementById('callsign-input');
-  const name = input.value.trim() || 'GHOST';
+  const name = input.value.trim();
+  if(!name){
+    input.style.borderColor = '#f44';
+    input.style.boxShadow = '0 0 10px rgba(255,0,0,.2)';
+    speak('I need a name. Who am I speaking to?', 'tactical', true);
+    setTimeout(() => { input.style.borderColor = '#051'; input.style.boxShadow = ''; }, 1500);
+    return;
+  }
   callsign = name;
   const resp = document.getElementById('callsign-response');
   resp.textContent = 'Confirmed: '+name.toUpperCase();
@@ -620,7 +719,7 @@ function soloDeploy(){
 function teamDeploy(){
   S.mode = 'team';
   isTraining = false;
-  callsign = callsign || 'GHOST';
+  callsign = callsign || 'OPERATIVE';
   isHost = true;
   roomCode = Math.random().toString(36).slice(2,6).toUpperCase();
   players = [{id:myId, name:callsign, connected:true}];
@@ -633,10 +732,9 @@ function trainingDeploy(){
   S.mode = 'training';
   isTraining = true;
   isHost = false;
-  // Skip dossiers, go straight to a generated easy mission
   selectedPack = null;
   switchScreen('screen-briefing');
-  startScore();
+  startScore(); // fire-and-forget — audio already unlocked from prologue tap
   fetchMission('walk');
 }
 
@@ -1178,7 +1276,7 @@ function hostDeploy(){
   broadcast({type:'host_deploy'});
   isTraining = false;
   switchScreen('screen-briefing');
-  startScore();
+  startScore(); // see trainingDeploy note
   fetchMission('jog');
 }
 
@@ -1231,7 +1329,7 @@ function connectWS(){
     } else if(d.type === 'host_deploy'){
       isTraining = false;
       switchScreen('screen-briefing');
-      startScore();
+      startScore(); // fire-and-forget
       fetchMission('jog');
     }
   };

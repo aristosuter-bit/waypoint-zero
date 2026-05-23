@@ -198,6 +198,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mission .wp-dot.go-time{border-color:#f44;color:#f44;box-shadow:0 0 15px rgba(255,0,0,.3);animation:pulseRed .8s infinite}
 .mission .m-photo-btn{display:none;padding:6px 14px;font-size:8px}
 .mission .m-abort-btn{padding:4px 8px;font-size:7px;max-width:40px}
+.mission .m-ptt-btn{display:none;padding:6px 12px;font-size:8px;max-width:100px;background:rgba(0,20,0,.4);border:1px solid #0a0;color:#0f0;border-radius:4px;cursor:pointer;letter-spacing:.08em;transition:all .15s;font-family:inherit}
+.mission .m-ptt-btn.show{display:inline-block}
+.mission .m-ptt-btn:active,.mission .m-ptt-btn.transmitting{background:rgba(255,0,0,.15);border-color:#f44;color:#f44;box-shadow:0 0 12px rgba(255,0,0,.2);animation:pulseRed 1s infinite}
+.mission .m-ptt-indicator{display:none;font-size:7px;color:#f44;text-align:center;animation:blink .5s infinite;margin-top:2px}
+.mission .m-ptt-indicator.active{display:block}
 
 /* ====== CAMERA ====== */
 .camera .cam-view{flex:1;display:flex;align-items:center;justify-content:center;background:#000;width:100%;position:relative}
@@ -259,8 +264,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <span class="sub">Host a new squad</span>
     </button>
     <div class="divider"><span>OR JOIN</span></div>
-    <input class="input" id="join-code-input" placeholder="ROOM CODE" maxlength="4" style="max-width:180px;font-size:20px;letter-spacing:.3em">
-    <button class="btn" onclick="joinGame()" style="max-width:180px">
+    <input class="input" id="join-code-input" placeholder="ROOM CODE" maxlength="4" style="font-size:20px;letter-spacing:.3em">
+    <button class="btn" onclick="joinGame()">
       <span class="label">JOIN GAME</span>
     </button>
     <button class="btn ghost" onclick="trainingDeploy()">
@@ -351,9 +356,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
   <div class="m-footer">
     <div class="wp-dots" id="wp-list"></div>
+    <button class="m-ptt-btn" id="ptt-btn" onmousedown="startPTT(event)" onmouseup="stopPTT()" onmouseleave="stopPTT()" ontouchstart="startPTT(event)" ontouchend="stopPTT(event)" ontouchcancel="stopPTT()">📻 HOLD</button>
     <button class="btn ghost m-photo-btn" id="photo-btn" onclick="openCamera()">📷</button>
     <button class="btn ghost m-abort-btn" onclick="abortMission()">✕</button>
   </div>
+  <div class="m-ptt-indicator" id="ptt-indicator">⬤ TRANSMITTING</div>
 </div>
 
 <!-- ====== CAMERA ====== -->
@@ -931,6 +938,8 @@ function deployMission(){
   document.getElementById('timer').textContent = '20:00';
   document.getElementById('timer').className = 'm-timer';
   document.getElementById('photo-btn').style.display = 'none';
+  // Show PTT button only in team mode
+  document.getElementById('ptt-btn').className = S.mode==='team' ? 'm-ptt-btn show' : 'm-ptt-btn';
   document.getElementById('breath-state').textContent = 'STEADY';
   document.getElementById('breath-state').style.color = '#0a0';
   document.getElementById('breath-tip').textContent = '';
@@ -1165,6 +1174,100 @@ function captureWP(idx){
   }
 }
 
+// ======== PUSH-TO-TALK (WALKIE-TALKIE) ========
+let pttRecorder = null;
+let pttStream = null;
+
+async function startPTT(e){
+  e.preventDefault();
+  if(pttRecorder || !S.active || S.mode !== 'team') return;
+  
+  const btn = document.getElementById('ptt-btn');
+  const ind = document.getElementById('ptt-indicator');
+  
+  try {
+    pttStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    pttRecorder = new MediaRecorder(pttStream, {mimeType:MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':'audio/webm'});
+    
+    btn.classList.add('transmitting');
+    btn.textContent = '📻 TX';
+    ind.classList.add('active');
+    
+    // Radio squelch on key
+    playStatic(0.15, 0.06);
+    
+    pttRecorder.ondataavailable = (e) => {
+      if(e.data.size > 0 && ws && ws.readyState === WebSocket.OPEN){
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result.split(',')[1];
+          ws.send(JSON.stringify({type:'voice', data:base64}));
+        };
+        reader.readAsDataURL(e.data);
+      }
+    };
+    
+    pttRecorder.start(200); // chunks every 200ms
+  } catch(err){
+    D('PTT mic: '+err.message);
+    speak('Microphone access denied.', 'tactical', true);
+  }
+}
+
+function stopPTT(){
+  if(!pttRecorder) return;
+  
+  const btn = document.getElementById('ptt-btn');
+  const ind = document.getElementById('ptt-indicator');
+  
+  // Radio squelch off
+  playStatic(0.12, 0.04);
+  
+  pttRecorder.stop();
+  pttRecorder = null;
+  
+  if(pttStream){
+    pttStream.getTracks().forEach(t => t.stop());
+    pttStream = null;
+  }
+  
+  btn.classList.remove('transmitting');
+  btn.textContent = '📻 HOLD';
+  ind.classList.remove('active');
+  
+  // Signal end of transmission
+  if(ws && ws.readyState === WebSocket.OPEN){
+    ws.send(JSON.stringify({type:'voice_end'}));
+  }
+}
+
+function playVoiceChunk(base64data){
+  if(!audioCtx || audioCtx.state !== 'running') return;
+  
+  const binary = atob(base64data);
+  const bytes = new Uint8Array(binary.length);
+  for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  
+  audioCtx.decodeAudioData(bytes.buffer, (audioBuffer) => {
+    const src = audioCtx.createBufferSource();
+    src.buffer = audioBuffer;
+    
+    // Radio bandpass filter
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 1000;
+    filter.Q.value = 0.7;
+    
+    const gain = audioCtx.createGain();
+    gain.gain.value = 1.2;
+    
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    src.start();
+  }, () => { /* decode error, skip */ });
+}
+
 // ======== CAMERA ========
 function openCamera(){
   switchScreen('screen-camera');
@@ -1382,6 +1485,12 @@ function connectWS(){
       switchScreen('screen-briefing');
       startScore(); // fire-and-forget
       fetchMission('jog');
+    } else if(d.type === 'voice'){
+      // Incoming voice chunk — play it
+      if(d.data) playVoiceChunk(d.data);
+    } else if(d.type === 'voice_end'){
+      // End of transmission — short static burst
+      playStatic(0.1, 0.03);
     }
   };
 

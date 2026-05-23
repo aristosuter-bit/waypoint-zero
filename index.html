@@ -137,6 +137,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .dossier .d-stamp{position:absolute;top:8px;right:10px;font-size:6px;color:rgba(255,80,0,.3);border:1px solid rgba(255,80,0,.2);padding:1px 4px;transform:rotate(8deg);letter-spacing:.05em;text-transform:uppercase}
 .dossier .d-redacted{background:#050;color:transparent;display:inline-block;width:60px;height:9px;margin:0 2px;vertical-align:middle}
 
+/* ====== DISTANCE SELECTOR ====== */
+.distance-picker{gap:12px;padding-top:16px}
+.distance-picker .section-head{font-size:8px;color:#050;letter-spacing:.25em;text-align:center;margin-bottom:4px;animation:slowBlink 3s infinite}
+.distance-picker .dist-group{width:100%;max-width:300px;display:flex;flex-direction:column;gap:8px}
+
 /* ====== BRIEFING ====== */
 .briefing{padding:16px;justify-content:flex-start;gap:8px}
 .briefing .b-head{font-size:8px;color:#050;letter-spacing:.25em;text-align:center;margin-bottom:4px}
@@ -323,6 +328,30 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <button class="btn ghost small" onclick="switchScreen('screen-ops')" style="margin-top:8px">BACK</button>
 </div>
 
+<!-- ====== DISTANCE SELECTOR (SOLO) ====== -->
+<div class="screen distance-picker" id="screen-distance">
+  <div class="section-head">■ SELECT MISSION DISTANCE ■</div>
+  <div class="dist-group">
+    <button class="btn primary" onclick="pickDistance(1)">
+      <span class="label">▸ 1 KILOMETER</span>
+      <span class="sub">Sprint recon · ~12 min</span>
+    </button>
+    <button class="btn" onclick="pickDistance(2)">
+      <span class="label">▸ 2 KILOMETERS</span>
+      <span class="sub">Patrol sweep · ~25 min</span>
+    </button>
+    <button class="btn" onclick="pickDistance(5)">
+      <span class="label">▸ 5 KILOMETERS</span>
+      <span class="sub">Deep recon · ~60 min</span>
+    </button>
+    <button class="btn" onclick="pickDistance(10)">
+      <span class="label">▸ 10 KILOMETERS</span>
+      <span class="sub">Endurance trial · ~120 min</span>
+    </button>
+  </div>
+  <button class="btn ghost small" onclick="switchScreen('screen-ops')" style="margin-top:16px">BACK</button>
+</div>
+
 <!-- ====== BRIEFING ====== -->
 <div class="screen briefing" id="screen-briefing">
   <div class="b-head" id="brief-head">■ MISSION BRIEFING ■</div>
@@ -414,7 +443,8 @@ let S = {
   photos:[], lat:null, lng:null, heading:0, active:false,
   lastNavCall:0, lastBreathDist:9999, packId:null, packName:null,
   tensionLevel:0, lastTension:0, voiceMode:'tactical', goTriggered:false,
-  mode:'solo' // solo | team | training
+  mode:'solo', // solo | team | training
+  generated:false, targetDist:0, timeLimit:0
 };
 
 // ======== AUDIO ENGINE ========
@@ -787,7 +817,8 @@ function soloDeploy(){
   S.mode = 'solo';
   isTraining = false;
   isHost = false;
-  showDossiers();
+  S.generated = false;
+  switchScreen('screen-distance');
 }
 
 function teamDeploy(){
@@ -990,6 +1021,128 @@ function genFallback(){
   return names.map((w,i)=>({...w, lat:(S.lat||47.33)+offsets[i][0], lng:(S.lng||9.41)+offsets[i][1], points:100+i*60}));
 }
 
+// ======== DISTANCE-BASED SOLO MISSIONS ========
+function pickDistance(km){
+  const timeLimits = {1:720, 2:1500, 5:3600, 10:7200}; // seconds
+  const objectives = {
+    1: ['Sprint recon — extract intel and return to base', 'Rapid sweep — locate the beacon before window closes', 'Flash patrol — map the sector under pressure'],
+    2: ['Perimeter sweep — identify all entry points', 'Patrol route — scout and report anomalies', 'Grid search — sweep for hidden caches'],
+    5: ['Deep recon — navigate the full circuit and document everything', 'Extended patrol — cover the sector, mark waypoints', 'Long-range scout — endurance run through hostile terrain'],
+    10: ['Endurance trial — complete the circuit before extraction window closes', 'Marathon recon — full sector sweep under time pressure', 'Iron patrol — no support, no extraction. Finish or fail.']
+  };
+  
+  S.targetDist = km * 1000;
+  S.timeLimit = timeLimits[km];
+  S.generated = true;
+  
+  const lat = S.lat || 47.3312;
+  const lng = S.lng || 9.4105;
+  
+  // Generate loop route
+  S.waypoints = generateLoopRoute(lat, lng, S.targetDist);
+  S.missionId = 'FIELD-'+km+'K-'+Math.random().toString(36).slice(2,5).toUpperCase();
+  S.packId = null;
+  S.packName = null;
+  S.currentWP = 0;
+  
+  // Pick random objective
+  const objs = objectives[km];
+  S.missionObj = objs[Math.floor(Math.random() * objs.length)];
+  S.threatLevel = km <= 2 ? 'MODERATE' : km <= 5 ? 'ELEVATED' : 'HIGH';
+  
+  // Show briefing
+  briefGeneratedMission();
+}
+
+function generateLoopRoute(centerLat, centerLng, distanceM){
+  const numPoints = Math.max(6, Math.ceil(distanceM / 180)); // ~180m between waypoints
+  const radius = distanceM / (2 * Math.PI); // approximate circular radius
+  
+  const waypoints = [];
+  for(let i = 0; i < numPoints; i++){
+    const angle = (i / numPoints) * 2 * Math.PI;
+    // Vary radius to create an irregular loop
+    const r = radius * (0.55 + Math.random() * 0.9);
+    const bearingDeg = angle * (180 / Math.PI);
+    const dest = destinationPoint(centerLat, centerLng, r, bearingDeg);
+    const clue = generateClue(i, numPoints);
+    
+    waypoints.push({
+      lat: dest.lat,
+      lng: dest.lng,
+      name: 'TURN-'+String(i+1).padStart(2,'0'),
+      intel: clue,
+      nav_text: clue,
+    });
+  }
+  
+  return waypoints;
+}
+
+function destinationPoint(lat, lng, distanceM, bearingDeg){
+  const R = 6371000;
+  const δ = distanceM / R;
+  const θ = bearingDeg * Math.PI / 180;
+  const φ1 = lat * Math.PI / 180;
+  const λ1 = lng * Math.PI / 180;
+  
+  const φ2 = Math.asin(Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ));
+  const λ2 = λ1 + Math.atan2(Math.sin(θ) * Math.sin(δ) * Math.cos(φ1), Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2));
+  
+  return {lat: φ2 * 180 / Math.PI, lng: λ2 * 180 / Math.PI};
+}
+
+function generateClue(idx, total){
+  if(idx === 0) return 'Move out. Heading established. Stay alert.';
+  
+  const directions = [
+    'Continue on this bearing. Steady pace.',
+    'Bear slightly right at the next junction.',
+    'Sharp left ahead — watch for the turn marker.',
+    'Straight on. No deviation. Keep moving.',
+    'Detour right — obstruction reported on path.',
+    'Left at the fork. Stay low.',
+    'Hold course. Next turn marker approaching.',
+    'Right turn coming up. Prepare to pivot.',
+    'Path narrows. Single file through here.',
+    'Open ground ahead. Pick up the pace.',
+    'Soft left. Follow the treeline.',
+    'Right at the bend. Don\'t overshoot.',
+  ];
+  
+  if(idx === total - 1) return 'Final approach. Extraction point dead ahead.';
+  if(idx % 4 === 0 && idx > 0) return 'Checkpoint marker passed. Resume course.';
+  if(idx % 7 === 0) return 'Obstruction detected — detour and rejoin route.';
+  
+  return directions[idx % directions.length];
+}
+
+function briefGeneratedMission(){
+  switchScreen('screen-briefing');
+  startScore();
+  
+  const min = Math.floor(S.timeLimit / 60);
+  const km = S.targetDist / 1000;
+  
+  document.getElementById('brief-pack').style.display = 'none';
+  document.getElementById('brief-op').textContent = S.missionId;
+  document.getElementById('brief-obj').textContent = S.missionObj;
+  document.getElementById('brief-threat').textContent = S.threatLevel;
+  document.getElementById('brief-wp').textContent = S.waypoints.length + ' turns · ' + km + 'km · ' + min + 'min';
+  document.getElementById('brief-locations').innerHTML = '<div style="color:#060;font-size:8px;font-style:italic;padding:4px 12px">Route generated from your position. Follow audio cues for turn-by-turn navigation. Stay on mission — clock is ticking.</div>';
+  document.getElementById('brief-narrative').style.display = 'none';
+  
+  // Render briefing map
+  const lat = S.lat || 47.3312;
+  const lng = S.lng || 9.4105;
+  renderBriefingMap(S.waypoints, lat, lng);
+  
+  // Briefing voice
+  setTimeout(() => {
+    speak(`Operation ${S.missionId}. ${S.missionObj}. ${km} kilometers. ${min} minute time limit. ${S.waypoints.length} turns. Follow the audio.`, 'tactical');
+  }, 400);
+}
+
 // ======== BRIEFING → DEPLOY ========
 function deployMission(){
   S.currentWP = 0; S.score = 0; S.photos = [];
@@ -998,9 +1151,13 @@ function deployMission(){
   S.tensionLevel = 0; S.lastTension = 0;
   S.goTriggered = false; S.voiceMode = 'tactical';
 
+  // Use dynamic time limit for generated missions, default 20min otherwise
+  const timeLimit = S.generated ? S.timeLimit : 1200;
+  const tlMin = Math.floor(timeLimit/60), tlSec = timeLimit%60;
+
   document.getElementById('mission-op-id').textContent = S.missionId;
-  document.getElementById('mission-obj-title').textContent = 'RECOVER INTEL';
-  document.getElementById('timer').textContent = '20:00';
+  document.getElementById('mission-obj-title').textContent = S.generated ? (S.missionObj||'COMPLETE CIRCUIT') : 'RECOVER INTEL';
+  document.getElementById('timer').textContent = tlMin+':'+tlSec.toString().padStart(2,'0');
   document.getElementById('timer').className = 'm-timer';
   document.getElementById('photo-btn').style.display = 'none';
   // Show PTT button only in team mode
@@ -1014,13 +1171,19 @@ function deployMission(){
   document.getElementById('compass-ring').className = 'compass-ring';
   document.getElementById('tension-fill').style.width = '0%';
   document.getElementById('tension-fill').style.background = '#0a0';
-  document.getElementById('wp-list').innerHTML = S.waypoints.map((_,i)=>
-    `<div class="wp-dot${i===0?' current':''}" id="wp-dot-${i}">${i+1}</div>`
-  ).join('');
+  
+  // Waypoint dots: hide for generated missions (audio-only navigation)
+  if(S.generated){
+    document.getElementById('wp-list').innerHTML = '';
+  } else {
+    document.getElementById('wp-list').innerHTML = S.waypoints.map((_,i)=>
+      `<div class="wp-dot${i===0?' current':''}" id="wp-dot-${i}">${i+1}</div>`
+    ).join('');
+  }
   switchScreen('screen-mission');
 
-  // Init minimap
-  setTimeout(() => initMissionMinimap(S.waypoints, S.lat||47.33, S.lng||9.41), 500);
+  // Init minimap: player-only for generated, full waypoints for API missions
+  setTimeout(() => initMissionMinimap(S.waypoints, S.lat||47.33, S.lng||9.41, S.generated), 500);
 
   // Start intervals
   window._timers = {};
@@ -1030,9 +1193,16 @@ function deployMission(){
   window._timers.breath = setInterval(() => { if(S.active && S.lat) updateBreathUI(); }, 3000);
   window._timers.tension = setInterval(() => { if(S.active) checkTensionTrigger(); }, 500);
 
-  // Deploy voice: tactical → whisper at end
-  const wpName = S.waypoints[0].name || 'first waypoint';
-  speak(`Deploying. First target: ${wpName}. Move out.`, 'tactical');
+  // Deploy voice
+  if(S.generated){
+    const km = S.targetDist / 1000;
+    const min = Math.floor(S.timeLimit / 60);
+    const clue = S.waypoints[0].nav_text || 'Move out.';
+    speak(`${km}km mission. ${min} minute window. ${clue}`, 'tactical');
+  } else {
+    const wpName = S.waypoints[0].name || 'first waypoint';
+    speak(`Deploying. First target: ${wpName}. Move out.`, 'tactical');
+  }
   setTimeout(() => {
     setTension(.05);
     speak('Stay low. Watch your corners.', 'whisper');
@@ -1042,16 +1212,18 @@ function deployMission(){
 // ======== MISSION LOOP ========
 function updateTimer(){
   if(!S.active) return;
-  const rem = Math.max(0, 1200 - Math.floor((Date.now()-S.startTime)/1000));
+  const total = S.generated ? S.timeLimit : 1200;
+  const rem = Math.max(0, total - Math.floor((Date.now()-S.startTime)/1000));
   const m = Math.floor(rem/60), s = rem%60;
   const t = document.getElementById('timer');
   t.textContent = m+':'+s.toString().padStart(2,'0');
-  if(rem < 180) t.className = 'm-timer critical';
-  else if(rem < 600) t.className = 'm-timer warn';
+  const pct = rem/total;
+  if(pct < .15) t.className = 'm-timer critical';
+  else if(pct < .4) t.className = 'm-timer warn';
   if(rem === 300) speak('Five minutes remaining.', 'alert', true);
   if(rem === 120) speak('Two minutes! Move!', 'shout', true);
   if(rem <= 0) endMission(false);
-  S.elapsed = 1200 - rem;
+  S.elapsed = total - rem;
 }
 
 function updateNav(){
@@ -1071,7 +1243,7 @@ function updateNav(){
 
   const dirs = ['AHEAD','SLIGHT RIGHT','RIGHT','HARD RIGHT','BEHIND','HARD LEFT','LEFT','SLIGHT LEFT'];
   document.getElementById('bearing-label').textContent = dirs[Math.round(rel/45)%8];
-  document.getElementById('wp-name').textContent = wp.name;
+  document.getElementById('wp-name').textContent = S.generated ? ('TURN '+(S.currentWP+1)+'/'+S.waypoints.length) : wp.name;
   document.getElementById('wp-intel').textContent = wp.intel || '';
 
   // Tension
@@ -1089,10 +1261,12 @@ function updateNav(){
   else if(tension > .5) ring.className = 'compass-ring hot';
   else ring.className = 'compass-ring';
 
-  // Update WP dot
-  const dot = document.getElementById('wp-dot-'+S.currentWP);
-  if(dot && tension > .7) dot.className = 'wp-dot current go-time';
-  else if(dot) dot.className = 'wp-dot current';
+  // Update WP dot (skip for generated missions)
+  if(!S.generated){
+    const dot = document.getElementById('wp-dot-'+S.currentWP);
+    if(dot && tension > .7) dot.className = 'wp-dot current go-time';
+    else if(dot) dot.className = 'wp-dot current';
+  }
 
   // Photo button
   if(d < 35 && document.getElementById('photo-btn').style.display === 'none'){
@@ -1101,6 +1275,22 @@ function updateNav(){
 
   // Distance changed significantly → update breath
   if(Math.abs(d - S.lastBreathDist) > 6){ S.lastBreathDist = d; updateBreathUI(); }
+
+  // Auto-capture for generated missions (proximity-based)
+  if(S.generated && d < 15 && S.currentWP < S.waypoints.length){
+    S.currentWP++;
+    S.goTriggered = false;
+    document.getElementById('alert-banner').classList.remove('active');
+    if(S.currentWP >= S.waypoints.length){
+      endMission(true);
+      return;
+    }
+    const next = S.waypoints[S.currentWP];
+    setTension(.08);
+    document.getElementById('compass-ring').className = 'compass-ring';
+    speak(next.nav_text || 'Turn confirmed. Next marker ahead.', 'tactical');
+    setTimeout(() => setTension(.15), 2000);
+  }
 
   // Nav call
   const now = Date.now();
@@ -1224,16 +1414,20 @@ function updateTeammateMarkers(){
 
 function captureWP(idx){
   if(idx >= S.waypoints.length) return;
-  const dot = document.getElementById('wp-dot-'+idx);
-  if(dot){ dot.classList.add('done'); dot.classList.remove('current','go-time'); }
+  if(!S.generated){
+    const dot = document.getElementById('wp-dot-'+idx);
+    if(dot){ dot.classList.add('done'); dot.classList.remove('current','go-time'); }
+  }
   if(idx === S.currentWP){
     S.currentWP++;
     S.goTriggered = false;
     if(S.currentWP >= S.waypoints.length){
       endMission(true);
     } else {
-      const nextDot = document.getElementById('wp-dot-'+S.currentWP);
-      if(nextDot) nextDot.classList.add('current');
+      if(!S.generated){
+        const nextDot = document.getElementById('wp-dot-'+S.currentWP);
+        if(nextDot) nextDot.classList.add('current');
+      }
       document.getElementById('photo-btn').style.display = 'none';
       setTension(.08);
       document.getElementById('compass-ring').className = 'compass-ring';
@@ -1396,10 +1590,12 @@ function processPhoto(dataUrl){
   const d = S.lat ? dist(S.lat, S.lng, wp.lat, wp.lng) : 0;
   if(d < 50 || !S.lat){
     const bonus = Math.max(0, 100 - Math.round(d));
-    S.score += wp.points + bonus;
+    S.score += (wp.points || 100) + bonus;
     S.photos.push(dataUrl);
-    document.getElementById('wp-dot-'+S.currentWP).classList.add('done');
-    document.getElementById('wp-dot-'+S.currentWP).classList.remove('current','go-time');
+    if(!S.generated){
+      document.getElementById('wp-dot-'+S.currentWP).classList.add('done');
+      document.getElementById('wp-dot-'+S.currentWP).classList.remove('current','go-time');
+    }
     S.currentWP++;
     S.goTriggered = false;
     setTension(0);
@@ -1409,7 +1605,7 @@ function processPhoto(dataUrl){
     if(S.currentWP >= S.waypoints.length){
       endMission(true);
     } else {
-      document.getElementById('wp-dot-'+S.currentWP).classList.add('current');
+      if(!S.generated) document.getElementById('wp-dot-'+S.currentWP).classList.add('current');
       document.getElementById('photo-btn').style.display = 'none';
       const next = S.waypoints[S.currentWP];
       speak(next.nav_text || 'Confirmed. '+next.name+'. Move out.', 'tactical');
@@ -1720,7 +1916,7 @@ function renderBriefingMap(waypoints, playerLat, playerLng){
   setTimeout(() => { if(briefingMap) briefingMap.invalidateSize(); }, 200);
 }
 
-function initMissionMinimap(waypoints, playerLat, playerLng){
+function initMissionMinimap(waypoints, playerLat, playerLng, hideWaypoints){
   const el = document.getElementById('mission-minimap');
   if(!el || !window.L) return;
   
@@ -1732,20 +1928,27 @@ function initMissionMinimap(waypoints, playerLat, playerLng){
     maxZoom: 18
   }).addTo(missionMap);
   
-  // Waypoints
+  // Waypoints: hide for generated missions (audio-only navigation)
   wpMarkers = [];
-  waypoints.forEach((wp, i) => {
-    const done = i < S.currentWP;
-    const current = i === S.currentWP;
-    const color = done ? '#060' : current ? '#0f0' : '#600';
-    const icon = L.divIcon({
-      className:'map-wp',
-      html:`<div style="width:${current?'12':'8'}px;height:${current?'12':'8'}px;background:${color};border-radius:50%;border:1px solid ${current?'#0f0':'#333'};box-shadow:0 0 ${current?'6':'2'}px ${color}"></div>`,
-      iconSize:current?[12,12]:[8,8], iconAnchor:current?[6,6]:[4,4]
+  const bounds = [[playerLat, playerLng]];
+  if(!hideWaypoints){
+    waypoints.forEach((wp, i) => {
+      const done = i < S.currentWP;
+      const current = i === S.currentWP;
+      const color = done ? '#060' : current ? '#0f0' : '#600';
+      const icon = L.divIcon({
+        className:'map-wp',
+        html:`<div style="width:${current?'12':'8'}px;height:${current?'12':'8'}px;background:${color};border-radius:50%;border:1px solid ${current?'#0f0':'#333'};box-shadow:0 0 ${current?'6':'2'}px ${color}"></div>`,
+        iconSize:current?[12,12]:[8,8], iconAnchor:current?[6,6]:[4,4]
+      });
+      const m = L.marker([wp.lat, wp.lng], {icon}).addTo(missionMap);
+      wpMarkers.push(m);
+      bounds.push([wp.lat, wp.lng]);
     });
-    const m = L.marker([wp.lat, wp.lng], {icon}).addTo(missionMap);
-    wpMarkers.push(m);
-  });
+  } else {
+    // For generated: fit to show the whole route area without markers
+    waypoints.forEach(wp => bounds.push([wp.lat, wp.lng]));
+  }
   
   // Player marker (larger for full screen)
   const playerIcon = L.divIcon({
@@ -1755,10 +1958,8 @@ function initMissionMinimap(waypoints, playerLat, playerLng){
   });
   missionMarker = L.marker([playerLat, playerLng], {icon:playerIcon}).addTo(missionMap);
   
-  // Fit all waypoints
-  const all = waypoints.map(w => [w.lat, w.lng]);
-  all.push([playerLat, playerLng]);
-  missionMap.fitBounds(all, {padding:[20,20]});
+  // Fit bounds
+  missionMap.fitBounds(bounds, {padding:[20,20]});
   
   // Invalidate after screen is visible
   setTimeout(() => { if(missionMap) missionMap.invalidateSize(); }, 200);

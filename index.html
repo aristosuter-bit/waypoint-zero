@@ -200,8 +200,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mission .m-abort-btn{padding:4px 8px;font-size:7px;max-width:40px}
 .mission .m-ptt-btn{display:none;padding:6px 12px;font-size:8px;max-width:100px;background:rgba(0,20,0,.4);border:1px solid #0a0;color:#0f0;border-radius:4px;cursor:pointer;letter-spacing:.08em;transition:all .15s;font-family:inherit}
 .mission .m-ptt-btn.show{display:inline-block}
-.mission .m-ptt-btn:active,.mission .m-ptt-btn.transmitting{background:rgba(255,0,0,.15);border-color:#f44;color:#f44;box-shadow:0 0 12px rgba(255,0,0,.2);animation:pulseRed 1s infinite}
-.mission .m-ptt-indicator{display:none;font-size:7px;color:#f44;text-align:center;animation:blink .5s infinite;margin-top:2px}
+.mission .m-ptt-btn.muted{background:rgba(40,0,0,.3);border-color:#600;color:#600}
+.mission .m-ptt-indicator{display:none;font-size:7px;color:#0a0;text-align:center;margin-top:2px}
 .mission .m-ptt-indicator.active{display:block}
 
 /* ====== CAMERA ====== */
@@ -356,11 +356,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
   <div class="m-footer">
     <div class="wp-dots" id="wp-list"></div>
-    <button class="m-ptt-btn" id="ptt-btn" onmousedown="startPTT(event)" onmouseup="stopPTT()" onmouseleave="stopPTT()" ontouchstart="startPTT(event)" ontouchend="stopPTT(event)" ontouchcancel="stopPTT()">📻 HOLD</button>
+    <button class="m-ptt-btn" id="mic-btn" onclick="toggleMic()">🎤 LIVE</button>
     <button class="btn ghost m-photo-btn" id="photo-btn" onclick="openCamera()">📷</button>
     <button class="btn ghost m-abort-btn" onclick="abortMission()">✕</button>
   </div>
-  <div class="m-ptt-indicator" id="ptt-indicator">⬤ TRANSMITTING</div>
+  <div class="m-ptt-indicator" id="audio-indicator"></div>
 </div>
 
 <!-- ====== CAMERA ====== -->
@@ -985,7 +985,9 @@ function deployMission(){
   document.getElementById('timer').className = 'm-timer';
   document.getElementById('photo-btn').style.display = 'none';
   // Show PTT button only in team mode
-  document.getElementById('ptt-btn').className = S.mode==='team' ? 'm-ptt-btn show' : 'm-ptt-btn';
+  document.getElementById('mic-btn').className = S.mode==='team' ? 'm-ptt-btn show' : 'm-ptt-btn';
+  // Open audio room for team mode
+  if(S.mode === 'team') setTimeout(() => openAudioRoom(), 1000);
   document.getElementById('breath-state').textContent = 'STEADY';
   document.getElementById('breath-state').style.color = '#0a0';
   document.getElementById('breath-tip').textContent = '';
@@ -1220,122 +1222,117 @@ function captureWP(idx){
   }
 }
 
-// ======== PUSH-TO-TALK (WALKIE-TALKIE) ========
-let pttRecorder = null;
-let pttStream = null;
-let voiceBuffers = {}; // player_id → base64 chunks
+// ======== AUDIO ROOM (CONTINUOUS VOICE CHANNEL) ========
+let micStream = null;
+let micRecorder = null;
+let micMuted = false;
+let audioQueue = [];
+let audioPlaying = false;
+let receivingFrom = {}; // player_id → last receive time
 
-async function startPTT(e){
-  e.preventDefault();
-  if(pttRecorder || !S.active || S.mode !== 'team') return;
-  
-  const btn = document.getElementById('ptt-btn');
-  const ind = document.getElementById('ptt-indicator');
-  
-  try {
-    pttStream = await navigator.mediaDevices.getUserMedia({audio:true});
-    // Use opus if available for better quality
+function openAudioRoom(){
+  if(micStream || S.mode !== 'team') return;
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream => {
+    micStream = stream;
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-    pttRecorder = new MediaRecorder(pttStream, {mimeType: mime});
+    micRecorder = new MediaRecorder(stream, {mimeType: mime});
     
-    btn.classList.add('transmitting');
-    btn.textContent = '📻 TX';
-    ind.classList.add('active');
-    
-    // Radio squelch on key
-    playStatic(0.15, 0.06);
-    
-    pttRecorder.ondataavailable = (e) => {
-      if(e.data.size > 0 && ws && ws.readyState === WebSocket.OPEN){
+    micRecorder.ondataavailable = (e) => {
+      if(e.data.size > 0 && !micMuted && ws && ws.readyState === WebSocket.OPEN){
         const reader = new FileReader();
         reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          ws.send(JSON.stringify({type:'voice', data:base64}));
+          ws.send(JSON.stringify({type:'voice', data: reader.result.split(',')[1]}));
         };
         reader.readAsDataURL(e.data);
       }
     };
     
-    pttRecorder.start(500); // 500ms chunks — fewer gaps
-  } catch(err){
-    D('PTT mic: '+err.message);
-    speak('Microphone access denied.', 'tactical', true);
+    micRecorder.start(250);
+    document.getElementById('mic-btn').textContent = '🎤 LIVE';
+    document.getElementById('mic-btn').classList.remove('muted');
+    document.getElementById('audio-indicator').classList.add('active');
+    document.getElementById('audio-indicator').textContent = '● CHANNEL OPEN';
+    D('Audio room open');
+  }).catch(e => {
+    D('Mic: '+e.message);
+    speak('Microphone needed for team comms.', 'tactical', true);
+  });
+}
+
+function closeAudioRoom(){
+  if(micRecorder){ micRecorder.stop(); micRecorder = null; }
+  if(micStream){ micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  document.getElementById('audio-indicator').classList.remove('active');
+  document.getElementById('audio-indicator').textContent = '';
+  audioQueue = []; audioPlaying = false;
+  D('Audio room closed');
+}
+
+function toggleMic(){
+  micMuted = !micMuted;
+  const btn = document.getElementById('mic-btn');
+  if(micMuted){
+    btn.textContent = '🔇 MUTED';
+    btn.classList.add('muted');
+    document.getElementById('audio-indicator').textContent = '● MUTED';
+  } else {
+    btn.textContent = '🎤 LIVE';
+    btn.classList.remove('muted');
+    document.getElementById('audio-indicator').textContent = '● CHANNEL OPEN';
   }
 }
 
-function stopPTT(){
-  if(!pttRecorder) return;
+// Streaming playback: queue chunks, play sequentially
+function receiveVoiceChunk(base64data, playerId){
+  receivingFrom[playerId] = Date.now();
+  audioQueue.push({data: base64data, playerId});
+  if(!audioPlaying) drainAudioQueue();
   
-  const btn = document.getElementById('ptt-btn');
-  const ind = document.getElementById('ptt-indicator');
-  
-  // Wait for final chunk then stop
-  pttRecorder.requestData();
-  setTimeout(() => {
-    if(pttRecorder){
-      pttRecorder.stop();
-      pttRecorder = null;
-    }
-    if(pttStream){
-      pttStream.getTracks().forEach(t => t.stop());
-      pttStream = null;
-    }
-    btn.classList.remove('transmitting');
-    btn.textContent = '📻 HOLD';
-    ind.classList.remove('active');
-    
-    // Signal end of transmission
-    if(ws && ws.readyState === WebSocket.OPEN){
-      ws.send(JSON.stringify({type:'voice_end'}));
-    }
-    
-    // Radio squelch off
-    playStatic(0.12, 0.04);
-  }, 300);
+  // Show who's talking
+  const ind = document.getElementById('audio-indicator');
+  const p = players.find(x => x.id === playerId);
+  if(p && ind) ind.textContent = '⬤ '+p.name+' SPEAKING';
 }
 
-function playVoiceChunk(base64data, playerId){
-  // Buffer chunks per player
-  if(!voiceBuffers[playerId]) voiceBuffers[playerId] = [];
-  voiceBuffers[playerId].push(base64data);
-}
-
-async function playBufferedVoice(playerId){
-  // Concatenate all buffered chunks and play as one continuous audio
-  const chunks = voiceBuffers[playerId] || [];
-  voiceBuffers[playerId] = [];
-  if(chunks.length === 0) return;
+async function drainAudioQueue(){
+  if(audioQueue.length === 0){
+    audioPlaying = false;
+    // Reset indicator after 500ms silence
+    setTimeout(() => {
+      if(audioQueue.length === 0){
+        const ind = document.getElementById('audio-indicator');
+        if(ind && S.mode==='team') ind.textContent = micMuted ? '● MUTED' : '● CHANNEL OPEN';
+      }
+    }, 500);
+    return;
+  }
+  audioPlaying = true;
   
-  // Concatenate base64 strings
-  const combined = chunks.join('');
-  const binary = atob(combined);
-  const bytes = new Uint8Array(binary.length);
-  for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  
-  if(!audioCtx || audioCtx.state !== 'running') return;
+  const item = audioQueue.shift();
+  if(!audioCtx || audioCtx.state !== 'running'){ drainAudioQueue(); return; }
   
   try {
-    const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
+    const binary = atob(item.data);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
     
+    const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
     const src = audioCtx.createBufferSource();
     src.buffer = audioBuffer;
     
-    // Soft radio filter — wider bandpass for clarity
     const filter = audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.value = 800;
     filter.Q.value = 0.5;
     
-    // Bit of distortion for radio feel
     const gain = audioCtx.createGain();
-    gain.gain.value = 1.1;
+    gain.gain.value = 1.0;
     
-    src.connect(filter);
-    filter.connect(gain);
-    gain.connect(audioCtx.destination);
+    src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    src.onended = () => drainAudioQueue();
     src.start();
   } catch(e){
-    D('Voice decode: '+e.message);
+    drainAudioQueue(); // skip bad chunk
   }
 }
 
@@ -1411,6 +1408,7 @@ function abortMission(){
 // ======== MISSION END ========
 function endMission(success){
   S.active = false;
+  closeAudioRoom();
   if(window._timers){
     Object.values(window._timers).forEach(clearInterval);
   }
@@ -1557,12 +1555,8 @@ function connectWS(){
       startScore(); // fire-and-forget
       fetchMission('jog');
     } else if(d.type === 'voice'){
-      // Buffer incoming voice chunk
-      if(d.data) playVoiceChunk(d.data, d.player_id || 'unknown');
-    } else if(d.type === 'voice_end'){
-      // End of transmission — play buffered audio
-      playStatic(0.1, 0.03);
-      playBufferedVoice(d.player_id || 'unknown');
+      // Streaming voice — queue and play immediately
+      if(d.data) receiveVoiceChunk(d.data, d.player_id || 'unknown');
     }
   };
 
@@ -1660,12 +1654,135 @@ function switchScreen(id){
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
+// ======== STATE PERSISTENCE ========
+function saveState(){
+  const st = {
+    screen: document.querySelector('.screen.active')?.id || '',
+    mode: S.mode,
+    callsign,
+    roomCode,
+    isHost,
+    players: players.filter(p => p.connected).map(p => ({id:p.id, name:p.name})),
+    selectedPack,
+    mission: S.active ? {
+      missionId: S.missionId,
+      waypoints: S.waypoints,
+      currentWP: S.currentWP,
+      score: S.score,
+      startTime: S.startTime,
+      packId: S.packId,
+      packName: S.packName,
+    } : null,
+    sensors: localStorage.getItem('wz_sensors'),
+  };
+  try { localStorage.setItem('wz_state', JSON.stringify(st)); } catch(e){}
+}
+
+function restoreState(){
+  try {
+    const raw = localStorage.getItem('wz_state');
+    if(!raw) return false;
+    const st = JSON.parse(raw);
+    // Clear saved state (one-shot restore)
+    localStorage.removeItem('wz_state');
+    
+    callsign = st.callsign || '';
+    S.mode = st.mode || 'solo';
+    selectedPack = st.selectedPack;
+    
+    if(st.mission && st.waypoints){
+      S.missionId = st.mission.missionId;
+      S.waypoints = st.mission.waypoints;
+      S.currentWP = st.mission.currentWP;
+      S.score = st.mission.score;
+      S.startTime = st.mission.startTime;
+      S.packId = st.mission.packId;
+      S.packName = st.mission.packName;
+      S.photos = [];
+      S.active = false; // will be set by deployMission
+    }
+    
+    if(st.mode === 'team' && st.roomCode){
+      roomCode = st.roomCode;
+      isHost = st.isHost;
+      players = st.players || [];
+      if(isHost){
+        showHostRoom();
+        connectWS();
+      } else {
+        showJoinRoom();
+        connectWS();
+      }
+      return true;
+    }
+    
+    // Restore to the right screen
+    if(st.screen === 'screen-briefing' && st.mission){
+      switchScreen('screen-briefing');
+      startScore();
+      // Populate briefing from saved mission
+      document.getElementById('brief-op').textContent = st.mission.missionId;
+      document.getElementById('brief-obj').textContent = 'Resume mission';
+      document.getElementById('brief-threat').textContent = 'MODERATE';
+      document.getElementById('brief-wp').textContent = st.mission.waypoints.length+' targets';
+      if(st.mission.packName){
+        document.getElementById('brief-pack').style.display = 'block';
+        document.getElementById('brief-pack').textContent = st.mission.packName;
+      }
+      // Auto-advance to deploy after brief pause
+      setTimeout(() => deployMission(), 2000);
+      return true;
+    }
+    
+    if(st.screen === 'screen-mission' && st.mission){
+      // Go straight to deploy
+      deployMission();
+      // Restore score and WP progress
+      S.currentWP = st.mission.currentWP;
+      S.score = st.mission.score;
+      // Update UI
+      for(let i=0; i<S.waypoints.length; i++){
+        const dot = document.getElementById('wp-dot-'+i);
+        if(dot && i < S.currentWP) dot.classList.add('done');
+        if(dot && i === S.currentWP) dot.classList.add('current');
+      }
+      document.getElementById('distance').textContent = '--';
+      return true;
+    }
+    
+    return false;
+  } catch(e){ return false; }
+}
+
+// Auto-save on key transitions
+function hookSaveState(){
+  // Save when leaving any screen (before screen switch)
+  const origSwitch = switchScreen;
+  // Save periodically during mission
+  setInterval(() => {
+    if(S.active) saveState();
+  }, 10000);
+  // Save on page unload
+  window.addEventListener('beforeunload', () => { if(S.active || isHost) saveState(); });
+  window.addEventListener('pagehide', () => { if(S.active || isHost) saveState(); });
+}
+
 // ======== INIT ========
 document.addEventListener('DOMContentLoaded', () => {
   // Auto-start sensors if previously granted
   if(localStorage.getItem('wz_sensors')==='granted'){ startGPS(); startCompass(); }
+  
+  // Try to restore previous session
+  const restored = restoreState();
+  if(restored){
+    D('Session restored');
+    hookSaveState();
+    return;
+  }
+  
   // Start prologue
   setTimeout(() => startPrologue(), 500);
+  hookSaveState();
 });
 </script>
 </body>

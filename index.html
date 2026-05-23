@@ -9,63 +9,76 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100dvh;width:100vw;overflow:hidden;font-family:'SF Mono','Courier New',monospace;background:#000;color:#0f0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.015) 2px,rgba(0,0,0,.015) 4px);pointer-events:none;z-index:998;opacity:.4}
 .screen{position:absolute;inset:0;display:none;flex-direction:column;padding:16px;z-index:1;overflow-y:auto}
 .screen.active{display:flex}
 @keyframes pulse{50%{box-shadow:0 0 20px #0f0,0 0 35px #0f0}}
 @keyframes blink{50%{opacity:.3}}
 @keyframes fadeInOut{0%,100%{opacity:.5}50%{opacity:1}}
-@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
-body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.015) 2px,rgba(0,0,0,.015) 4px);pointer-events:none;z-index:998;opacity:.4}
+@keyframes breatheBox{0%,100%{box-shadow:0 0 4px rgba(0,255,0,.08),inset 0 0 4px rgba(0,255,0,.02)}50%{box-shadow:0 0 10px rgba(0,255,0,.12),inset 0 0 8px rgba(0,255,0,.04)}}
+@keyframes breatheBoxFast{0%,100%{box-shadow:0 0 6px rgba(255,136,0,.12),inset 0 0 6px rgba(255,136,0,.03)}50%{box-shadow:0 0 14px rgba(255,136,0,.2),inset 0 0 10px rgba(255,136,0,.06)}}
+@keyframes breatheBoxPanic{0%,100%{box-shadow:0 0 8px rgba(255,0,0,.15),inset 0 0 8px rgba(255,0,0,.04)}50%{box-shadow:0 0 18px rgba(255,0,0,.28),inset 0 0 14px rgba(255,0,0,.06)}}
 
-/* ====== TYPOGRAPHY ====== */
+/* ====== SHARED ====== */
 .classified{font-size:8px;letter-spacing:.35em;color:#0a0;animation:fadeInOut 3s infinite}
 .crest{font-size:8px;letter-spacing:.25em;color:#050}
 .title{font-size:36px;font-weight:900;letter-spacing:.06em;line-height:.9;text-shadow:0 0 30px #0f0,0 0 60px #0a0}
 .subtitle{font-size:9px;color:#050;letter-spacing:.3em;margin-bottom:20px}
-
-/* ====== INPUTS ====== */
 .input{background:rgba(0,15,0,.4);border:1px solid #0a0;color:#0f0;padding:12px 16px;font-size:14px;font-family:inherit;width:100%;max-width:260px;text-align:center;letter-spacing:.15em;text-transform:uppercase;backdrop-filter:blur(4px)}
 .input::placeholder{color:#020}
 .btn{background:#0f0;color:#000;border:none;padding:12px 28px;font-size:13px;font-weight:900;font-family:inherit;letter-spacing:.12em;cursor:pointer;text-transform:uppercase;transition:.1s;width:100%;max-width:260px;box-shadow:0 0 12px rgba(0,255,0,.2);margin:3px 0}
 .btn:active{background:#0a0;box-shadow:0 0 25px rgba(0,255,0,.35)}
+.btn:disabled{opacity:.3;pointer-events:none}
 .btn.ghost{background:transparent;color:#0a0;border:1px solid #0a0;box-shadow:none;padding:7px 14px;font-size:9px}
 .btn.blue{background:#002;color:#6af;box-shadow:0 0 12px rgba(100,170,255,.15)}
 .btn.red{background:#200;color:#f44;box-shadow:0 0 12px rgba(255,0,0,.15)}
-.btn:disabled{opacity:.3;pointer-events:none}
 
-/* ====== SCREENS ====== */
-.lobby,.team-config,.briefing,.complete{align-items:center;justify-content:center;text-align:center;gap:6px}
-
-/* Game mode selector */
+/* ====== LOBBY ====== */
+.lobby,.lobby-join,.briefing,.complete{align-items:center;justify-content:center;text-align:center;gap:6px}
 .mode-card{width:100%;max-width:260px;padding:14px;border:1px solid #030;cursor:pointer;text-align:center;transition:.2s;margin:4px 0}
 .mode-card.selected{border-color:#0f0;box-shadow:0 0 15px rgba(0,255,0,.15);background:rgba(0,15,0,.3)}
-.mode-card .mode-icon{font-size:28px;margin-bottom:4px}
-.mode-card .mode-name{font-size:12px;font-weight:900;letter-spacing:.1em;color:#0f0}
+.mode-card .mode-icon{font-size:26px;margin-bottom:3px}
+.mode-card .mode-name{font-size:11px;font-weight:900;letter-spacing:.1em;color:#0f0}
 .mode-card .mode-desc{font-size:8px;color:#050;margin-top:2px}
 
-/* Team config */
-.config-row{display:flex;gap:8px;align-items:center;justify-content:center;margin:6px 0}
-.config-label{font-size:10px;color:#0a0;letter-spacing:.1em;min-width:80px;text-align:right}
-.config-val{font-size:18px;font-weight:900;color:#0f0;min-width:30px;text-align:center}
-.config-btn{width:36px;height:36px;border:1px solid #0a0;background:transparent;color:#0f0;font-size:18px;cursor:pointer;font-family:inherit}
-.config-btn:active{background:rgba(0,255,0,.1)}
+/* ====== JOIN SCREEN ====== */
+.room-code{font-size:32px;font-weight:900;letter-spacing:.3em;color:#0f0;text-shadow:0 0 20px #0f0;padding:8px 16px;border:1px dashed #0a0;margin:4px 0}
+.status-line{font-size:9px;letter-spacing:.08em;margin:4px 0}
+.status-line.waiting{color:#f80;animation:blink 2s infinite}
+.status-line.ready{color:#0f0}
+.status-line.error{color:#f00}
+.player-list{width:100%;max-width:260px;margin:8px 0}
+.player-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid #030;margin:3px 0;font-size:10px;letter-spacing:.08em}
+.player-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#0f0;box-shadow:0 0 5px #0f0}
+.player-dot.you{background:#0af;box-shadow:0 0 8px #0af}
+.player-name{flex:1;text-align:left}
+.player-team{font-size:8px;color:#050}
 
-/* Room code */
-.room-code{font-size:28px;font-weight:900;letter-spacing:.25em;color:#0f0;text-shadow:0 0 15px #0f0;padding:8px 16px;border:1px dashed #0a0;margin:8px 0}
+.conn-indicator{display:flex;align-items:center;gap:6px;font-size:8px;letter-spacing:.08em;margin:4px 0}
+.conn-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.conn-dot.connected{background:#0f0;box-shadow:0 0 5px #0f0}
+.conn-dot.connecting{background:#f80;animation:blink .5s infinite}
+.conn-dot.disconnected{background:#f00}
 
-/* ====== MISSION SCREEN ====== */
+/* ====== BRIEFING ====== */
+.intel-card{background:rgba(0,15,0,.25);border:1px solid #0a0;padding:14px;max-width:340px;width:100%;text-align:left;font-size:9px;line-height:1.7}
+.intel-card .lbl{color:#0a0;font-size:7px;letter-spacing:.2em}
+.intel-card .val{color:#0f0;margin-bottom:4px}
+.intel-card .val.big{font-size:13px;font-weight:900}
+.threat{color:#f80;font-size:14px;font-weight:900}
+
+/* ====== MISSION ====== */
 .mission-header{display:flex;justify-content:space-between;align-items:flex-start;padding:2px 0}
 .op-name{font-size:8px;color:#050;letter-spacing:.2em}
 .op-title{font-size:11px;color:#0a0;letter-spacing:.1em}
 .timer{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
 .timer.warn{color:#f80;animation:blink .5s infinite}
 .timer.critical{color:#f00;animation:blink .25s infinite}
-.heading-debug{text-align:center;font-size:7px;color:#030;letter-spacing:.08em;padding:1px 0}
-.alert-banner{background:rgba(255,80,0,.1);border:1px solid #f80;padding:3px 8px;font-size:8px;color:#f80;letter-spacing:.1em;text-align:center;display:none}
+.hdg-debug{text-align:center;font-size:7px;color:#030;letter-spacing:.08em;padding:1px 0}
+.alert-banner{background:rgba(255,80,0,.08);border:1px solid #f80;padding:3px 8px;font-size:8px;color:#f80;letter-spacing:.1em;text-align:center;display:none}
 .alert-banner.active{display:block;animation:blink 1s infinite}
 
-/* Compass */
-.compass-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:170px}
+.compass-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:160px}
 .compass-ring{width:150px;height:150px;border-radius:50%;border:2px solid #0a0;position:relative;box-shadow:0 0 10px rgba(0,255,0,.1),inset 0 0 10px rgba(0,255,0,.03)}
 .compass-inner{width:114px;height:114px;border-radius:50%;border:1px solid #030;position:relative}
 .compass-arrow{position:absolute;top:50%;left:50%;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:30px solid #0f0;transform:translate(-50%,-100%);filter:drop-shadow(0 0 8px #0f0);transition:transform .3s}
@@ -74,57 +87,50 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .compass-e{right:4px;top:50%;transform:translateY(-50%);color:#020}.compass-w{left:4px;top:50%;transform:translateY(-50%);color:#020}
 .tm-marker{position:absolute;width:6px;height:6px;border-radius:50%;transform:translate(-50%,-50%);transition:.5s;z-index:2}
 
-/* Nav info */
 .nav-info{text-align:center;padding:2px 0}
 .distance{font-size:38px;font-weight:900;line-height:1}
 .bearing-text{font-size:10px;color:#0a0;letter-spacing:.08em;margin-top:1px}
 .wp-name{font-size:10px;color:#0f0;margin-top:2px;letter-spacing:.08em}
 .wp-intel{font-size:8px;color:#050;margin-top:1px;font-style:italic}
 
-/* Breathing */
-.breath-box{margin:4px auto;padding:6px 10px;max-width:240px;border:1px solid #040;text-align:center;animation:breathAnim 4s ease-in-out infinite}
-@keyframes breathAnim{0%,100%{box-shadow:0 0 4px rgba(0,255,0,.1),inset 0 0 4px rgba(0,255,0,.02)}50%{box-shadow:0 0 10px rgba(0,255,0,.15),inset 0 0 8px rgba(0,255,0,.05)}}
-.breath-box.fast{animation-duration:2s;border-color:#f80}
-.breath-box.panic{animation-duration:.8s;border-color:#f00}
+.breath-box{margin:4px auto;padding:6px 10px;max-width:240px;border:1px solid #040;text-align:center;animation:breatheBox 4s ease-in-out infinite}
+.breath-box.fast{animation-duration:2s;border-color:#f80;animation-name:breatheBoxFast}
+.breath-box.panic{animation-duration:.8s;border-color:#f00;animation-name:breatheBoxPanic}
 .breath-state{font-size:10px;color:#0f0;letter-spacing:.08em}
 .breath-tip{font-size:7px;color:#060;margin-top:1px;font-style:italic}
 .whisper-line{text-align:center;font-size:7px;color:#040;margin:1px 0;min-height:10px;font-style:italic}
 
-/* Footer */
 .mission-footer{display:flex;gap:4px;padding:2px 0;align-items:center}
 .wp-dots{display:flex;gap:3px;flex:1}
 .wp-dot{width:20px;height:20px;border-radius:50%;border:1px solid #030;display:flex;align-items:center;justify-content:center;font-size:7px;color:#030;flex-shrink:0;transition:.3s}
 .wp-dot.done{background:#0a0;border-color:#0f0;color:#000}
 .wp-dot.current{border-color:#0f0;color:#0f0;box-shadow:0 0 8px #0f0;animation:pulse 1s infinite}
 
-/* Team status bar */
 .team-bar{display:flex;gap:4px;padding:1px 0;align-items:center;justify-content:center}
 .team-dot{width:7px;height:7px;border-radius:50%}
 
-/* Camera */
 .camera-area{flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative}
 .camera-area video{width:100%;height:100%;object-fit:cover;opacity:.8}
 .capture-btn{width:60px;height:60px;border-radius:50%;border:3px solid #0f0;background:rgba(0,255,0,.1);cursor:pointer;position:absolute;bottom:30px;left:50%;transform:translateX(-50%);box-shadow:0 0 15px rgba(0,255,0,.15)}
 .capture-btn:active{background:rgba(0,255,0,.25);transform:translateX(-50%) scale(.95)}
 
-/* Complete */
+/* ====== COMPLETE ====== */
 .score{font-size:54px;font-weight:900;line-height:1;text-shadow:0 0 30px #0f0,0 0 60px #0a0}
 .grade{font-size:12px;font-weight:900;letter-spacing:.15em;margin-top:4px}
 .stats{font-size:8px;color:#050;line-height:1.8}
 .photos img{width:44px;height:44px;object-fit:cover;border:1px solid #0a0;border-radius:2px}
 
-/* Overlays */
+/* ====== OVERLAYS ====== */
 .voice-dot{position:fixed;top:8px;right:8px;width:5px;height:5px;border-radius:50%;background:#0f0;opacity:0;z-index:1000}
 .voice-dot.speaking{opacity:1;animation:pulse .3s infinite}
 .debug-bar{position:fixed;bottom:4px;left:4px;font-size:6px;color:#030;z-index:1000;letter-spacing:.05em;max-width:70%}
 </style>
 </head>
 <body>
-
 <div class="voice-dot" id="voice-dot"></div>
 <div class="debug-bar" id="debug-bar"></div>
 
-<!-- SCREEN: LOBBY — Choose game mode -->
+<!-- ====== SCREEN: MAIN LOBBY ====== -->
 <div class="screen active lobby" id="screen-lobby">
   <div class="classified">■ CLASSIFIED ■</div>
   <div class="crest">▸ JOINT SPECIAL OPERATIONS COMMAND</div>
@@ -132,112 +138,84 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div class="subtitle">AUDIO FIELD TERMINAL</div>
 
   <div class="mode-card selected" id="mode-solo" onclick="selectMode('solo')">
-    <div class="mode-icon">🎯</div>
-    <div class="mode-name">SOLO OPERATION</div>
-    <div class="mode-desc">Single operative. Full stealth. Maximum score.</div>
+    <div class="mode-icon">🎯</div><div class="mode-name">SOLO</div><div class="mode-desc">One operative. Full stealth.</div>
   </div>
   <div class="mode-card" id="mode-team" onclick="selectMode('team')">
-    <div class="mode-icon">👥</div>
-    <div class="mode-name">TEAM OPERATION</div>
-    <div class="mode-desc">Coordinate with your squad. Shared objectives.</div>
+    <div class="mode-icon">👥</div><div class="mode-name">CO-OP</div><div class="mode-desc">Team up. Shared objectives.</div>
   </div>
   <div class="mode-card" id="mode-pvp" onclick="selectMode('pvp')">
-    <div class="mode-icon">⚔️</div>
-    <div class="mode-name">PvP OPERATION</div>
-    <div class="mode-desc">Two teams. Hunt each other. Photograph enemies.</div>
+    <div class="mode-icon">⚔️</div><div class="mode-name">PvP</div><div class="mode-desc">Two teams. Hunt each other.</div>
   </div>
 
-  <button class="btn" onclick="continueToConfig()">CONTINUE</button>
+  <input class="input" id="lobby-callsign" placeholder="CALLSIGN" maxlength="12" value="GHOST">
+
+  <button class="btn" onclick="continueFromLobby()">CONTINUE</button>
   <button class="btn ghost" onclick="requestSensors()">UNLOCK SENSORS</button>
   <p style="color:#020;font-size:7px;margin-top:8px;letter-spacing:.12em">HEADPHONES · GPS · CAMERA · COMPASS</p>
   <div id="gps-status" style="color:#300;font-size:7px;margin-top:2px"></div>
 </div>
 
-<!-- SCREEN: TEAM CONFIG -->
-<div class="screen team-config" id="screen-config">
-  <div class="classified">■ OPERATION CONFIG ■</div>
+<!-- ====== SCREEN: JOIN / LOBBY ====== -->
+<div class="screen lobby-join" id="screen-join">
+  <div class="classified">■ TEAM ASSEMBLY ■</div>
 
-  <div id="config-solo" style="display:none;gap:8px;flex-direction:column;align-items:center;width:100%">
-    <p style="color:#0a0;font-size:10px;letter-spacing:.1em">SOLO OPERATIVE</p>
-    <input class="input" id="solo-callsign" placeholder="CALLSIGN" maxlength="12" value="GHOST">
+  <!-- CHOICE: host or join -->
+  <div id="join-choice" style="display:flex;flex-direction:column;align-items:center;gap:8px;width:100%">
+    <p style="font-size:10px;color:#0a0;letter-spacing:.1em">CO-OP SETUP</p>
+    <button class="btn" onclick="createRoom()">HOST GAME</button>
+    <p style="font-size:8px;color:#050">— or —</p>
+    <input class="input" id="quick-join-code" placeholder="ROOM CODE" maxlength="4" style="max-width:140px;font-size:20px">
+    <button class="btn blue" onclick="joinAsPlayer()">JOIN GAME</button>
+    <button class="btn ghost" onclick="switchScreen('screen-lobby')">BACK</button>
   </div>
 
-  <div id="config-team" style="display:none;gap:8px;flex-direction:column;align-items:center;width:100%">
-    <p style="color:#0a0;font-size:10px;letter-spacing:.1em">TEAM SETUP</p>
-    <input class="input" id="team-callsign" placeholder="YOUR CALLSIGN" maxlength="12" value="GHOST">
-    <div class="config-row">
-      <span class="config-label">PLAYERS</span>
-      <button class="config-btn" onclick="adjVal('team-players',-1)">-</button>
-      <span class="config-val" id="val-players">2</span>
-      <button class="config-btn" onclick="adjVal('team-players',1)">+</button>
+  <!-- HOST VIEW -->
+  <div id="host-view" style="display:none;flex-direction:column;align-items:center;gap:8px;width:100%">
+    <p style="font-size:9px;color:#050">SHARE THIS CODE WITH YOUR TEAM</p>
+    <div class="room-code" id="room-code">----</div>
+    <div class="conn-indicator">
+      <div class="conn-dot connected" id="conn-dot"></div>
+      <span id="conn-text">Connected</span>
     </div>
-    <div style="margin:8px 0">
-      <p style="color:#050;font-size:8px">CREATE or JOIN</p>
-      <button class="btn" onclick="createRoom()">CREATE ROOM</button>
-      <div style="margin:8px 0">
-        <input class="input" id="join-code" placeholder="ROOM CODE" maxlength="4" style="max-width:120px;font-size:18px">
-        <button class="btn blue" onclick="joinRoom()" style="margin-top:4px">JOIN</button>
-      </div>
-    </div>
-    <div id="room-display" style="display:none">
-      <p style="color:#050;font-size:8px">SHARE CODE</p>
-      <div class="room-code" id="room-code">----</div>
-    </div>
-    <div id="team-roster" style="font-size:8px;color:#050;width:100%;max-width:260px"></div>
+    <div class="player-list" id="player-list"></div>
+    <div class="status-line waiting" id="status-line">Waiting for players...</div>
+    <button class="btn" onclick="hostDeploy()" id="host-deploy-btn" disabled>REQUEST BRIEFING</button>
+    <button class="btn ghost" onclick="leaveRoom()">LEAVE</button>
   </div>
 
-  <div id="config-pvp" style="display:none;gap:8px;flex-direction:column;align-items:center;width:100%">
-    <p style="color:#f44;font-size:10px;letter-spacing:.1em">PvP SETUP</p>
-    <input class="input" id="pvp-callsign" placeholder="YOUR CALLSIGN" maxlength="12" value="GHOST">
-    <div class="config-row">
-      <span class="config-label">TEAMS</span>
-      <button class="config-btn" onclick="adjVal('pvp-teams',-1)">-</button>
-      <span class="config-val" id="val-teams">2</span>
-      <button class="config-btn" onclick="adjVal('pvp-teams',1)">+</button>
+  <!-- JOINER VIEW -->
+  <div id="joiner-view" style="display:none;flex-direction:column;align-items:center;gap:8px;width:100%">
+    <p style="font-size:9px;color:#050">ENTER ROOM CODE FROM HOST</p>
+    <input class="input" id="join-code" placeholder="CODE" maxlength="4" style="max-width:140px;font-size:22px">
+    <button class="btn blue" onclick="joinAsPlayer()">JOIN GAME</button>
+    <div class="conn-indicator" id="join-conn" style="display:none">
+      <div class="conn-dot connecting" style="width:6px;height:6px;border-radius:50%"></div>
+      <span style="font-size:8px;color:#f80">Connecting...</span>
     </div>
-    <div class="config-row">
-      <span class="config-label">PER TEAM</span>
-      <button class="config-btn" onclick="adjVal('pvp-per-team',-1)">-</button>
-      <span class="config-val" id="val-per-team">2</span>
-      <button class="config-btn" onclick="adjVal('pvp-per-team',1)">+</button>
-    </div>
-    <button class="btn red" onclick="createPVPRoom()">CREATE PVP ROOM</button>
-    <div id="pvp-room-display" style="display:none">
-      <p style="color:#050;font-size:8px">SHARE CODE</p>
-      <div class="room-code" id="pvp-room-code">----</div>
-    </div>
-    <div style="margin:8px 0">
-      <input class="input" id="pvp-join-code" placeholder="ROOM CODE" maxlength="4" style="max-width:120px;font-size:18px">
-      <button class="btn red" onclick="joinPVPRoom()" style="margin-top:4px">JOIN PVP</button>
-    </div>
-    <div id="pvp-roster" style="font-size:8px;color:#f44;width:100%;max-width:260px"></div>
+    <div class="status-line error" id="join-error" style="display:none"></div>
+    <div class="player-list" id="join-player-list" style="display:none"></div>
+    <div class="status-line waiting" id="join-status" style="display:none">Waiting for host to start...</div>
+    <button class="btn ghost" onclick="leaveRoom()">BACK</button>
   </div>
-
-  <button class="btn" onclick="deploy()" id="deploy-btn">REQUEST BRIEFING</button>
-  <button class="btn ghost" onclick="switchScreen('screen-lobby')">BACK</button>
 </div>
 
-<!-- SCREEN: BRIEFING -->
+<!-- ====== SCREEN: BRIEFING ====== -->
 <div class="screen briefing" id="screen-briefing">
   <div class="classified">■ MISSION BRIEFING ■</div>
-  <div style="background:rgba(0,15,0,.25);border:1px solid #0a0;padding:14px;max-width:340px;text-align:left;font-size:9px;line-height:1.7;width:100%">
-    <div style="color:#0a0;font-size:7px;letter-spacing:.2em">OPERATION</div>
-    <div style="color:#0f0;font-size:13px;font-weight:900;margin-bottom:6px" id="brief-op">---</div>
-    <div style="color:#0a0;font-size:7px;letter-spacing:.2em">OBJECTIVE</div>
-    <div style="color:#0f0;margin-bottom:4px" id="brief-obj">---</div>
-    <div style="color:#0a0;font-size:7px;letter-spacing:.2em">THREAT</div>
-    <div style="color:#f80;font-size:14px;font-weight:900;margin-bottom:4px" id="brief-threat">---</div>
-    <div style="color:#0a0;font-size:7px;letter-spacing:.2em">WAYPOINTS</div>
-    <div style="color:#0f0" id="brief-wp"></div>
+  <div class="intel-card">
+    <div class="lbl">OPERATION</div><div class="val big" id="brief-op">---</div>
+    <div class="lbl">OBJECTIVE</div><div class="val" id="brief-obj">---</div>
+    <div class="lbl">THREAT</div><div class="threat" id="brief-threat">---</div>
+    <div class="lbl">WAYPOINTS</div><div class="val" id="brief-wp"></div>
   </div>
   <div id="brief-map" style="font-size:8px;color:#0a0;max-width:340px;text-align:left;padding:6px;line-height:1.6"></div>
   <button class="btn" onclick="startMission()">DEPLOY</button>
 </div>
 
-<!-- SCREEN: MISSION -->
+<!-- ====== SCREEN: MISSION ====== -->
 <div class="screen" id="screen-mission">
   <div class="alert-banner" id="alert-banner"></div>
-  <div class="heading-debug" id="heading-debug">COMPASS: --°</div>
+  <div class="hdg-debug" id="heading-debug">COMPASS: --°</div>
   <div class="mission-header">
     <div><div class="op-name" id="mission-id">OP</div><div class="op-title" id="mission-obj">---</div></div>
     <div class="timer" id="timer">20:00</div>
@@ -265,14 +243,14 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
 </div>
 
-<!-- SCREEN: CAMERA -->
+<!-- ====== SCREEN: CAMERA ====== -->
 <div class="screen" id="screen-camera">
   <div class="camera-area"><video id="camera-video" autoplay playsinline></video></div>
   <div class="capture-btn" onclick="capturePhoto()"></div>
   <button class="btn ghost" onclick="closeCamera()" style="position:absolute;top:10px;right:10px;font-size:7px;padding:3px 7px">BACK</button>
 </div>
 
-<!-- SCREEN: COMPLETE -->
+<!-- ====== SCREEN: COMPLETE ====== -->
 <div class="screen complete" id="screen-complete">
   <div class="classified">■ DEBRIEF ■</div>
   <div class="score" id="final-score">0</div>
@@ -285,256 +263,289 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.min.js"></script>
 <script>
-// ============================================================
-// WAYPOINT ZERO — Tone.js ambient · Edge TTS voice · WebSocket multi
-// ============================================================
 "use strict";
-
-const BACKEND = "https://waypoint-zero.swisschatbot.ch";
-// Fallback for local dev
-const BACKEND_LOCAL = "http://localhost:8765";
-let api = BACKEND;
-
+const API = "https://waypoint-zero.swisschatbot.ch";
 function D(m){ document.getElementById('debug-bar').textContent=m; console.log('[WZ]',m); }
 
-// ======== GAME MODE ========
+// ======== GAME STATE ========
 let gameMode = 'solo';
-let config = { players:2, teams:2, perTeam:2, callsign:'GHOST', roomCode:'', isHost:false };
-let teamPlayers = []; // {id, name, team, role, lat, lng}
+let callsign = 'GHOST';
+let isHost = false;
+let roomCode = '';
+let myId = Math.random().toString(36).slice(2,8);
+let ws = null;
+let players = []; // {id, name, team, connected}
+let STATE = { missionId:'',waypoints:[],currentWP:0,score:0,startTime:0,elapsed:0,photos:[],gpsLat:null,gpsLng:null,heading:0,missionActive:false,lastNavCall:0,lastBreathDist:9999,_toneTension:0 };
 
-function selectMode(mode){
-  gameMode = mode;
-  document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('selected'));
-  document.getElementById('mode-'+mode).classList.add('selected');
-}
-function continueToConfig(){
-  document.getElementById('config-solo').style.display = gameMode==='solo'?'flex':'none';
-  document.getElementById('config-team').style.display = gameMode==='team'?'flex':'none';
-  document.getElementById('config-pvp').style.display = gameMode==='pvp'?'flex':'none';
-  switchScreen('screen-config');
-}
-function adjVal(key, delta){
-  const el = document.getElementById('val-'+key.replace(/^[a-z]+-/,''));
-  let v = parseInt(el.textContent) + delta;
-  if(key==='team-players') v = Math.max(1,Math.min(8,v));
-  if(key==='pvp-teams') v = Math.max(2,Math.min(4,v));
-  if(key==='pvp-per-team') v = Math.max(1,Math.min(6,v));
-  el.textContent = v;
-  config[key.split('-').pop()] = v;
+// ======== MODE + FLOW ========
+function selectMode(m){ gameMode=m; document.querySelectorAll('.mode-card').forEach(c=>c.classList.remove('selected')); document.getElementById('mode-'+m).classList.add('selected'); }
+
+function continueFromLobby(){
+  callsign = document.getElementById('lobby-callsign').value.trim()||'GHOST';
+  if(gameMode==='solo'){
+    deploySolo();
+  }else{
+    // Show join screen with host/join choice
+    document.getElementById('join-choice').style.display='flex';
+    document.getElementById('host-view').style.display='none';
+    document.getElementById('joiner-view').style.display='none';
+    switchScreen('screen-join');
+  }
 }
 
-// ======== ROOM MANAGEMENT ========
+// ======== HOST FLOW ========
+function showHostLobby(){
+  document.getElementById('join-choice').style.display='none';
+  document.getElementById('host-view').style.display='flex';
+  document.getElementById('joiner-view').style.display='none';
+  document.getElementById('room-code').textContent = roomCode;
+  document.getElementById('host-deploy-btn').disabled = true;
+  updateHostStatus();
+}
+
 function createRoom(){
-  config.isHost = true;
-  config.roomCode = Math.random().toString(36).slice(2,6).toUpperCase();
-  document.getElementById('room-code').textContent = config.roomCode;
-  document.getElementById('room-display').style.display = 'block';
-  D('Room: '+config.roomCode);
-  connectWebSocket(config.roomCode);
+  isHost = true;
+  roomCode = Math.random().toString(36).slice(2,6).toUpperCase();
+  players = [{id:myId, name:callsign, team:'alpha', connected:true}];
+  connectWS();
+  showHostLobby();
 }
-function createPVPRoom(){
-  gameMode = 'pvp';
-  config.isHost = true;
-  config.roomCode = Math.random().toString(36).slice(2,6).toUpperCase();
-  document.getElementById('pvp-room-code').textContent = config.roomCode;
-  document.getElementById('pvp-room-display').style.display = 'block';
-  D('PvP Room: '+config.roomCode);
-  connectWebSocket(config.roomCode);
+
+function hostDeploy(){
+  // Broadcast mission start to all players
+  broadcast({type:'host_deploy'});
+  deploySolo();
 }
-function joinRoom(){
-  config.isHost = false;
-  config.roomCode = document.getElementById('join-code').value.trim().toUpperCase();
-  if(!config.roomCode) return;
-  D('Joining: '+config.roomCode);
-  connectWebSocket(config.roomCode);
+
+function updateHostStatus(){
+  const statusEl = document.getElementById('status-line');
+  const deployBtn = document.getElementById('host-deploy-btn');
+  const connectedCount = players.filter(p=>p.connected).length;
+
+  if(connectedCount >= 2){
+    statusEl.textContent = `${connectedCount} players connected — ready`;
+    statusEl.className = 'status-line ready';
+    deployBtn.disabled = false;
+  }else{
+    statusEl.textContent = `Waiting for players... (${connectedCount} connected)`;
+    statusEl.className = 'status-line waiting';
+    deployBtn.disabled = false; // allow solo deploy too
+  }
+
+  // Render player list
+  document.getElementById('player-list').innerHTML = players.map(p=>
+    `<div class="player-row">
+      <div class="player-dot ${p.id===myId?'you':''}"></div>
+      <span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span>
+      <span class="player-team">${p.team||'?'}</span>
+    </div>`
+  ).join('');
 }
-function joinPVPRoom(){
-  gameMode = 'pvp';
-  config.isHost = false;
-  config.roomCode = document.getElementById('pvp-join-code').value.trim().toUpperCase();
-  if(!config.roomCode) return;
-  D('Joining PvP: '+config.roomCode);
-  connectWebSocket(config.roomCode);
+
+// ======== JOINER FLOW ========
+function joinAsPlayer(){
+  const codeEl = document.getElementById('quick-join-code') || document.getElementById('join-code');
+  const code = codeEl.value.trim().toUpperCase();
+  if(!code||code.length<4) return;
+  isHost = false;
+  roomCode = code;
+  document.getElementById('join-choice').style.display='none';
+  document.getElementById('host-view').style.display='none';
+  document.getElementById('joiner-view').style.display='flex';
+  document.getElementById('join-error').style.display='none';
+  document.getElementById('join-player-list').style.display='none';
+  document.getElementById('join-status').style.display='none';
+  document.getElementById('join-conn').style.display='flex';
+  connectWS();
+}
+
+function showJoinerLobby(hostName){
+  document.getElementById('join-conn').style.display='none';
+  document.getElementById('join-player-list').style.display='block';
+  document.getElementById('join-status').style.display='block';
+  document.getElementById('join-status').textContent = 'Connected. Waiting for host...';
+  document.getElementById('join-player-list').innerHTML = players.map(p=>
+    `<div class="player-row">
+      <div class="player-dot ${p.id===myId?'you':''}"></div>
+      <span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span>
+    </div>`
+  ).join('');
 }
 
 // ======== WEBSOCKET ========
-let ws = null, myId = '';
-function connectWebSocket(code){
-  myId = Math.random().toString(36).slice(2,8);
-  const wsUrl = api.replace('https://','wss://').replace('http://','ws://');
-  ws = new WebSocket(`${wsUrl}/ws/${code}/${myId}`);
+function connectWS(){
+  const wsUrl = API.replace('https://','wss://');
+  try{
+    ws = new WebSocket(`${wsUrl}/ws/${roomCode}/${myId}`);
+  }catch(e){
+    D('WS create err: '+e.message);
+    return;
+  }
 
   ws.onopen = () => {
-    D('WS connected');
-    const name = document.getElementById(
-      gameMode==='solo'?'solo-callsign':
-      gameMode==='pvp'?'pvp-callsign':'team-callsign'
-    ).value.trim()||'GHOST';
-    config.callsign = name;
-    ws.send(JSON.stringify({type:'join',name,team:gameMode==='pvp'?'alpha':name,role:'operative'}));
+    D('Connected to room '+roomCode);
+    updateConnUI('connected','Connected');
+    // Send join
+    ws.send(JSON.stringify({type:'join', name:callsign, team:gameMode==='pvp'?(isHost?'alpha':'bravo'):'alpha', role:'operative'}));
   };
 
   ws.onmessage = (e) => {
     const d = JSON.parse(e.data);
+
     if(d.type==='joined'){
-      D('Room joined: '+d.player_id);
-      if(config.isHost){ teamPlayers.push({id:d.player_id,name:config.callsign,team:'alpha',role:'operative'}); }
-      updateRoster();
-    } else if(d.type==='player_joined'){
-      if(!teamPlayers.find(p=>p.id===d.player_id)){
-        teamPlayers.push({...d.info,id:d.player_id});
+      D('Joined room');
+      if(isHost){
+        // Host gets initial player list
+        players = [{id:myId,name:callsign,team:'alpha',connected:true}];
+        updateHostStatus();
       }
-      updateRoster();
-    } else if(d.type==='player_left'){
-      teamPlayers = teamPlayers.filter(p=>p.id!==d.player_id);
-      updateRoster();
-    } else if(d.type==='positions'){
+    }
+    else if(d.type==='player_joined'){
+      // Add new player
+      if(!players.find(p=>p.id===d.player_id)){
+        players.push({...d.info, id:d.player_id, connected:true});
+      }
+      if(isHost) updateHostStatus();
+      else {
+        showJoinerLobby(d.info?.name||'Unknown');
+        // Show player list
+        document.getElementById('join-player-list').innerHTML = players.map(p=>
+          `<div class="player-row">
+            <div class="player-dot ${p.id===myId?'you':''}"></div>
+            <span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span>
+          </div>`
+        ).join('');
+      }
+      D(d.info?.name+' joined');
+    }
+    else if(d.type==='player_left'){
+      players = players.filter(p=>p.id!==d.player_id);
+      if(isHost) updateHostStatus();
+      else{
+        document.getElementById('join-player-list').innerHTML = players.map(p=>
+          `<div class="player-row"><div class="player-dot ${p.id===myId?'you':''}"></div><span class="player-name">${p.name}${p.id===myId?' (YOU)':''}</span></div>`
+        ).join('');
+      }
+    }
+    else if(d.type==='positions'){
       // Update teammate positions
       const pos = d.positions;
-      teamPlayers.forEach(p=>{
-        if(pos[p.id]){ p.lat=pos[p.id].lat; p.lng=pos[p.id].lng; }
-      });
+      players.forEach(p=>{ if(pos[p.id]){ p.lat=pos[p.id].lat; p.lng=pos[p.id].lng; } });
       if(STATE.missionActive) updateTeammateMarkers();
-    } else if(d.type==='wp_captured'){
-      if(d.player_id !== myId) captureWP(d.wp_index);
-    } else if(d.type==='photo_tag'){
-      if(d.target === myId){
-        D('TAGGED! -'+d.points+'pts');
-        STATE.score = Math.max(0, STATE.score - d.points);
-      }
-    } else if(d.type==='pong'){}
+    }
+    else if(d.type==='wp_captured'){
+      if(d.player_id!==myId) captureWP(d.wp_index);
+    }
+    else if(d.type==='photo_tag'){
+      if(d.target===myId){ STATE.score=Math.max(0,STATE.score-d.points); D('TAGGED -'+d.points+'pts'); }
+    }
+    else if(d.type==='host_deploy'){
+      // Host started the mission — joiners deploy too
+      deploySolo();
+    }
+    else if(d.type==='pong'){}
   };
 
-  ws.onclose = () => { D('WS disconnected'); };
-  ws.onerror = () => { D('WS error — trying local'); api = BACKEND_LOCAL; connectWebSocket(code); };
+  ws.onclose = () => {
+    updateConnUI('disconnected','Disconnected');
+    if(isHost) updateHostStatus();
+  };
+  ws.onerror = () => {
+    if(isHost) updateConnUI('disconnected','Connection error');
+    else {
+      document.getElementById('join-conn').style.display='none';
+      document.getElementById('join-error').style.display='block';
+      document.getElementById('join-error').textContent = 'Connection failed. Check the room code.';
+    }
+  };
 }
 
-function updateRoster(){
-  const rosterId = gameMode==='pvp'?'pvp-roster':'team-roster';
-  const rosterEl = document.getElementById(rosterId);
-  if(!rosterEl) return;
-  rosterEl.innerHTML = teamPlayers.map(p=>
-    `<div style="color:#0a0;margin:2px 0">● ${p.name} <span style="color:#050">[${p.team||'?'}]</span></div>`
-  ).join('');
-  document.getElementById('deploy-btn').disabled = teamPlayers.length < 1;
+function updateConnUI(state, text){
+  const dot = document.getElementById('conn-dot');
+  const txt = document.getElementById('conn-text');
+  if(dot) dot.className = 'conn-dot '+state;
+  if(txt) txt.textContent = text;
+}
+
+function broadcast(data){
+  if(ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(data));
+}
+function sendPosition(){
+  if(ws&&ws.readyState===WebSocket.OPEN&&STATE.gpsLat){
+    ws.send(JSON.stringify({type:'position',lat:STATE.gpsLat,lng:STATE.gpsLng}));
+  }
+}
+
+function leaveRoom(){
+  if(ws) ws.close();
+  ws=null; players=[]; isHost=false;
+  switchScreen('screen-lobby');
 }
 
 // ======== SENSORS ========
 function requestSensors(){
-  if(localStorage.getItem('wz_sensors')==='granted'){
-    startGPS(); startCompass(); D('Sensors: cached OK');
-    return;
-  }
+  if(localStorage.getItem('wz_sensors')==='granted'){ startGPS(); startCompass(); D('Sensors OK'); return; }
   if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
     DeviceOrientationEvent.requestPermission().then(s=>{
       if(s==='granted'){ localStorage.setItem('wz_sensors','granted'); startGPS(); startCompass(); D('Sensors OK'); }
       else{ startGPS(); D('Motion denied'); }
     }).catch(()=>{startGPS();startCompass();});
-  }else{ startGPS(); startCompass(); D('Sensors auto'); }
+  }else{ startGPS(); startCompass(); }
 }
 
-// ======== AUDIO: Tone.js Ambient Score ========
-let scoreActive = false;
+// ======== TONE.JS AMBIENT ========
+let scoreActive=false;
 function startScore(){
-  if(scoreActive) return; scoreActive = true;
-  // D minor pad
-  const pad = new Tone.PolySynth(Tone.Synth, {
-    oscillator: {type:'sine'},
-    envelope: {attack:1.5, decay:2, sustain:0.3, release:3}
-  }).toDestination();
-
-  const reverb = new Tone.Reverb({decay:4, wet:0.4}).toDestination();
-  pad.connect(reverb);
-  pad.volume.value = -24; // quiet — atmospheric
-
-  const notes = ['D3','F3','A3','E4'];
-  const pattern = new Tone.Pattern((time, note) => {
-    pad.triggerAttackRelease(note, '4n', time, 0.12);
-  }, notes, 'random').start(0);
-
-  Tone.Transport.bpm.value = 50;
-  Tone.Transport.start();
-
-  window._score = {pad, reverb, pattern};
-
-  // Bass pulse
-  const bass = new Tone.MembraneSynth({pitchDecay:0.1, octaves:2, volume:-18}).toDestination();
-  const bassPattern = new Tone.Pattern((time) => {
-    bass.triggerAttackRelease('D2', '16n', time, 0.4);
-  }, [0], 'random').start(0);
-  bassPattern.interval = '2n';
-  window._bass = {synth:bass, pattern:bassPattern};
+  if(scoreActive)return;scoreActive=true;
+  const pad=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},envelope:{attack:1.5,decay:2,sustain:.3,release:3}}).toDestination();
+  const reverb=new Tone.Reverb({decay:4,wet:.4}).toDestination();pad.connect(reverb);pad.volume.value=-26;
+  new Tone.Pattern((t,n)=>{pad.triggerAttackRelease(n,'4n',t,.1);},['D3','F3','A3','E4'],'random').start(0);
+  Tone.Transport.bpm.value=50;Tone.Transport.start();
+  window._score={pad,reverb};
+  const bass=new Tone.MembraneSynth({pitchDecay:.1,octaves:2,volume:-20}).toDestination();
+  const bp=new Tone.Pattern((t)=>{bass.triggerAttackRelease('D2','16n',t,.3);},[0],'random').start(0);bp.interval='2n';
+  window._bass={synth:bass,pattern:bp};
 }
-
-function setToneTension(level){
-  if(!window._score) return;
-  // level: 0=calm, 1=panic
-  const padVol = -24 + level * 10;
-  window._score.pad.volume.rampTo(padVol, 2);
-  window._score.reverb.wet.rampTo(0.3 + level * 0.4, 2);
-  Tone.Transport.bpm.rampTo(50 + level * 40, 2);
-  if(window._bass){
-    window._bass.synth.volume.rampTo(-18 + level * 12, 2);
-    window._bass.pattern.interval = level > 0.5 ? '4n' : '2n';
-  }
+function setToneTension(l){
+  if(!window._score)return;
+  window._score.pad.volume.rampTo(-26+l*10,2);
+  window._score.reverb.wet.rampTo(.3+l*.4,2);
+  Tone.Transport.bpm.rampTo(50+l*40,2);
+  if(window._bass){window._bass.synth.volume.rampTo(-20+l*12,2);window._bass.pattern.interval=l>.5?'4n':'2n';}
 }
+function stopScore(){if(!scoreActive)return;scoreActive=false;Tone.Transport.stop();if(window._score){window._score.pad.dispose();window._score.reverb.dispose();}if(window._bass){window._bass.synth.dispose();window._bass.pattern.dispose();}}
 
-function stopScore(){
-  if(!scoreActive) return;
-  scoreActive = false;
-  Tone.Transport.stop();
-  if(window._score){ window._score.pad.dispose(); window._score.reverb.dispose(); window._score.pattern.dispose(); }
-  if(window._bass){ window._bass.synth.dispose(); window._bass.pattern.dispose(); }
-}
-
-// ======== VOICE (Edge TTS via backend) ========
-let currentAudio = null;
-async function speak(text, urgency=0){
+// ======== VOICE (Edge TTS) ========
+let curAudio=null;
+async function speak(text,urgency=0){
   try{
-    if(currentAudio){ currentAudio.pause(); currentAudio=null; }
-    const resp = await fetch(`${api}/tts`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text, voice:urgency>0.5?'operator':'commander', speed:urgency>0.5?'+10%':'+0%'})
-    });
-    if(!resp.ok){ D('TTS err '+resp.status); return; }
-    const blob = await resp.blob();
-    const url = URL.createObjectURL(blob);
-    const a = new Audio(url);
-    a.volume = 0.9;
+    if(curAudio){curAudio.pause();curAudio=null;}
+    const r=await fetch(`${API}/tts`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice:urgency>.5?'operator':'commander',speed:urgency>.5?'+10%':'+0%'})});
+    if(!r.ok){D('TTS '+r.status);return;}
+    const blob=await r.blob();const url=URL.createObjectURL(blob);
+    const a=new Audio(url);a.volume=.9;
     document.getElementById('voice-dot').classList.add('speaking');
-    a.onended = ()=>{ document.getElementById('voice-dot').classList.remove('speaking'); URL.revokeObjectURL(url); };
-    a.play().catch(()=>{});
-    currentAudio = a;
-  }catch(e){ D('TTS fail: '+e.message); }
+    a.onended=()=>{document.getElementById('voice-dot').classList.remove('speaking');URL.revokeObjectURL(url);};
+    a.play().catch(()=>{});curAudio=a;
+  }catch(e){D('TTS: '+e.message);}
 }
-
-// ======== STATE ========
-let STATE = {
-  missionId:'', waypoints:[], currentWP:0, score:0, startTime:0, elapsed:0, photos:[],
-  gpsLat:null, gpsLng:null, heading:0, missionActive:false, lastNavCall:0,
-  lastBreathDist:9999, threat:'MODERATE', enemyActivity:'',
-};
 
 // ======== GPS & COMPASS ========
 function startGPS(){
   if(!navigator.geolocation){D('No GPS');return;}
   navigator.geolocation.watchPosition(pos=>{
-    STATE.gpsLat=pos.coords.latitude; STATE.gpsLng=pos.coords.longitude;
+    STATE.gpsLat=pos.coords.latitude;STATE.gpsLng=pos.coords.longitude;
     document.getElementById('gps-status').textContent='● GPS '+pos.coords.latitude.toFixed(4);
     document.getElementById('gps-status').style.color='#0a0';
-    if(STATE.missionActive){ updateNav(); updateBreathUI(); sendPosition(); }
-  },e=>{document.getElementById('gps-status').textContent='GPS ERR';document.getElementById('gps-status').style.color='#300';},
-  {enableHighAccuracy:true,maximumAge:1500,timeout:10000});
+    if(STATE.missionActive){updateNav();updateBreathUI();sendPosition();}
+  },e=>{document.getElementById('gps-status').textContent='GPS ERR';document.getElementById('gps-status').style.color='#300';},{enableHighAccuracy:true,maximumAge:1500,timeout:10000});
 }
 function startCompass(){
   let got=false;
   window.addEventListener('deviceorientation',e=>{
     let h=null;
-    if(e.webkitCompassHeading!==undefined)h=e.webkitCompassHeading;
-    else if(e.alpha!==null)h=360-e.alpha;
-    if(h!==null&&!isNaN(h)){
-      STATE.heading=h; got=true;
+    if(e.webkitCompassHeading!==undefined)h=e.webkitCompassHeading;else if(e.alpha!==null)h=360-e.alpha;
+    if(h!==null&&!isNaN(h)){STATE.heading=h;got=true;
       document.getElementById('heading-debug').textContent='COMPASS: '+Math.round(h)+'°';
       document.getElementById('heading-debug').style.color='#060';
       if(STATE.missionActive){updateNav();updateTeammateMarkers();}
@@ -543,117 +554,73 @@ function startCompass(){
   setTimeout(()=>{if(!got){document.getElementById('heading-debug').textContent='COMPASS: tap UNLOCK';document.getElementById('heading-debug').style.color='#600';}},3000);
 }
 
-function sendPosition(){
-  if(ws&&ws.readyState===WebSocket.OPEN){
-    ws.send(JSON.stringify({type:'position',lat:STATE.gpsLat,lng:STATE.gpsLng}));
-  }
-}
-
-// ======== MATH ========
+// MATH
 function bearing(l1,ln1,l2,ln2){const φ1=l1*Math.PI/180,φ2=l2*Math.PI/180,Δλ=(ln2-ln1)*Math.PI/180;const y=Math.sin(Δλ)*Math.cos(φ2),x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);return((Math.atan2(y,x)*180/Math.PI)+360)%360;}
 function dist(l1,ln1,l2,ln2){const R=6371000,φ1=l1*Math.PI/180,φ2=l2*Math.PI/180,Δφ=(l2-l1)*Math.PI/180,Δλ=(ln2-ln1)*Math.PI/180;const a=Math.sin(Δφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
 
-// ======== MISSION FLOW ========
-async function deploy(){
-  const callsignEl = document.getElementById(
-    gameMode==='solo'?'solo-callsign':
-    gameMode==='pvp'?'pvp-callsign':'team-callsign'
-  );
-  config.callsign = callsignEl.value.trim()||'GHOST';
-
-  // Fetch mission from backend
-  document.getElementById('brief-op').textContent = 'FETCHING...';
-  document.getElementById('brief-obj').textContent = 'Requesting satellite intel...';
-  document.getElementById('brief-map').innerHTML = '<span style="color:#050">◈ Connecting to satellite...</span>';
-
+// ======== DEPLOY ========
+async function deploySolo(){
+  document.getElementById('brief-op').textContent='FETCHING...';
+  document.getElementById('brief-obj').textContent='Requesting satellite intel...';
   switchScreen('screen-briefing');
   startScore();
 
   try{
-    const lat = STATE.gpsLat||47.3312;
-    const lng = STATE.gpsLng||9.4105;
-    const resp = await fetch(`${api}/mission?lat=${lat}&lng=${lng}&waypoints=4`);
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    const mission = await resp.json();
-
-    STATE.missionId = mission.mission_id;
-    STATE.waypoints = mission.waypoints;
-    STATE.threat = mission.threat_level;
-    STATE.enemyActivity = mission.enemy_activity;
-
-    document.getElementById('brief-op').textContent = mission.mission_id;
-    document.getElementById('brief-obj').textContent = mission.objective;
-    document.getElementById('brief-threat').textContent = mission.threat_level;
-    document.getElementById('brief-wp').innerHTML = mission.waypoints.map(w=>'📍 '+w.name).join('<br>');
-
-    const mapEl = document.getElementById('brief-map');
-    if(mission.player_location_name){
-      mapEl.innerHTML = '<div style="color:#6f6;font-size:10px;font-weight:900;margin-bottom:4px">◆ SATELLITE: REAL LOCATIONS</div>' +
-        '<div style="color:#0a0;font-size:8px">SECTOR: '+mission.player_location_name+'</div>';
-    }
+    const lat=STATE.gpsLat||47.3312,lng=STATE.gpsLng||9.4105;
+    const r=await fetch(`${API}/mission?lat=${lat}&lng=${lng}&waypoints=4`);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const m=await r.json();
+    STATE.missionId=m.mission_id;STATE.waypoints=m.waypoints;STATE._threat=m.threat_level;
+    document.getElementById('brief-op').textContent=m.mission_id;
+    document.getElementById('brief-obj').textContent=m.objective;
+    document.getElementById('brief-threat').textContent=m.threat_level;
+    document.getElementById('brief-wp').innerHTML=m.waypoints.map(w=>'📍 '+w.name).join('<br>');
+    const mapEl=document.getElementById('brief-map');
+    if(m.player_location_name)mapEl.innerHTML='<div style="color:#6f6;font-size:10px;font-weight:900;margin-bottom:4px">◆ SATELLITE: REAL LOCATIONS</div><div style="color:#0a0;font-size:8px">SECTOR: '+m.player_location_name+'</div>';
   }catch(e){
     D('Mission err: '+e.message);
-    // Fallback
-    STATE.missionId = 'NIGHTFALL-'+Math.random().toString(36).slice(2,5).toUpperCase();
-    STATE.waypoints = genFallback();
-    document.getElementById('brief-op').textContent = STATE.missionId;
-    document.getElementById('brief-obj').textContent = 'Recover intel caches.';
-    document.getElementById('brief-threat').textContent = 'MODERATE';
-    document.getElementById('brief-wp').innerHTML = STATE.waypoints.map(w=>'📍 '+w.name).join('<br>');
-    document.getElementById('brief-map').innerHTML = '<div style="color:#f80">◆ GENERATED (backend unreachable)</div>';
+    STATE.missionId='NIGHTFALL-'+Math.random().toString(36).slice(2,5).toUpperCase();
+    STATE.waypoints=genFallback();
+    document.getElementById('brief-op').textContent=STATE.missionId;
+    document.getElementById('brief-obj').textContent='Recover intel caches.';
+    document.getElementById('brief-threat').textContent='MODERATE';
+    document.getElementById('brief-wp').innerHTML=STATE.waypoints.map(w=>'📍 '+w.name).join('<br>');
+    document.getElementById('brief-map').innerHTML='<div style="color:#f80">◆ GENERATED (offline)</div>';
   }
-
-  setTimeout(()=>speak(`Team ${config.callsign}. Briefing ready. ${STATE.waypoints.length} waypoints.`), 500);
+  setTimeout(()=>speak(`Team ${callsign}. Briefing ready. ${STATE.waypoints.length} waypoints.`),500);
 }
 
 function genFallback(){
-  const names = [
-    {name:'RALLY ALPHA',intel:'Grid locked.'},
-    {name:'DEAD DROP',intel:'Cache nearby.'},
-    {name:'RELAY',intel:'High ground.'},
-    {name:'EXTRACTION',intel:'Rendezvous.'},
-  ];
-  const off = [[.002,.001],[.001,-.002],[-.002,-.001],[-.001,.002]];
-  return names.map((w,i)=>({...w,lat:(STATE.gpsLat||47.33)+off[i][0],lng:(STATE.gpsLng||9.41)+off[i][1],points:100+i*60}));
+  const n=[{name:'RALLY ALPHA',intel:'Grid locked.'},{name:'DEAD DROP',intel:'Cache nearby.'},{name:'RELAY',intel:'High ground.'},{name:'EXTRACTION',intel:'Rendezvous.'}];
+  const o=[[.002,.001],[.001,-.002],[-.002,-.001],[-.001,.002]];
+  return n.map((w,i)=>({...w,lat:(STATE.gpsLat||47.33)+o[i][0],lng:(STATE.gpsLng||9.41)+o[i][1],points:100+i*60}));
 }
 
 function startMission(){
-  STATE.currentWP=0;STATE.score=0;STATE.photos=[];STATE.startTime=Date.now();
-  STATE.missionActive=true;STATE.lastNavCall=0;STATE.lastBreathDist=9999;
-
+  STATE.currentWP=0;STATE.score=0;STATE.photos=[];STATE.startTime=Date.now();STATE.missionActive=true;STATE.lastNavCall=0;STATE.lastBreathDist=9999;
   document.getElementById('mission-id').textContent=STATE.missionId;
   document.getElementById('mission-obj').textContent='RECOVER INTEL';
   document.getElementById('timer').textContent='20:00';document.getElementById('timer').className='timer';
   document.getElementById('photo-btn').style.display='none';
-  document.getElementById('breath-state').textContent='STEADY';
-  document.getElementById('breath-state').style.color='#0a0';
-  document.getElementById('breath-tip').textContent='';
-  document.getElementById('breath-box').className='breath-box';
-  document.getElementById('wp-list').innerHTML=STATE.waypoints.map((_,i)=>
-    `<div class="wp-dot ${i===0?'current':''}" id="wp-dot-${i}">${i+1}</div>`).join('');
-
+  document.getElementById('breath-state').textContent='STEADY';document.getElementById('breath-state').style.color='#0a0';
+  document.getElementById('breath-tip').textContent='';document.getElementById('breath-box').className='breath-box';
+  document.getElementById('wp-list').innerHTML=STATE.waypoints.map((_,i)=>`<div class="wp-dot ${i===0?'current':''}" id="wp-dot-${i}">${i+1}</div>`).join('');
   switchScreen('screen-mission');
-
-  _timers.timer = setInterval(updateTimer,1000);
-  _timers.nav = setInterval(()=>{if(STATE.missionActive)updateNav();},2000);
-  _timers.pos = setInterval(()=>{if(STATE.missionActive)sendPosition();},3000);
-  _timers.breath = setInterval(()=>{if(STATE.missionActive&&STATE.gpsLat){const wp=STATE.waypoints[STATE.currentWP];const d=dist(STATE.gpsLat,STATE.gpsLng,wp.lat,wp.lng);updateBreathUI();}},5000);
-
-  speak(`${STATE.waypoints[0].nav_text||STATE.waypoints[0].name+'. Move out.'}`);
+  _t.timer=setInterval(updateTimer,1000);_t.nav=setInterval(()=>{if(STATE.missionActive)updateNav();},2000);
+  _t.pos=setInterval(()=>{if(STATE.missionActive)sendPosition();},3000);
+  _t.breath=setInterval(()=>{if(STATE.missionActive&&STATE.gpsLat)updateBreathUI();},5000);
+  speak(STATE.waypoints[0].nav_text||STATE.waypoints[0].name+'. Move out.');
 }
 
-let _timers={};
-
+let _t={};
 function updateTimer(){
   if(!STATE.missionActive)return;
   const rem=Math.max(0,1200-Math.floor((Date.now()-STATE.startTime)/1000));
   const m=Math.floor(rem/60),s=rem%60;
   const t=document.getElementById('timer');t.textContent=`${m}:${s.toString().padStart(2,'0')}`;
   if(rem<180)t.className='timer critical';else if(rem<600)t.className='timer warn';
-  if(rem===300)speak('Five minutes.',0.5);
-  if(rem===120)speak('Two minutes.',0.8);
-  if(rem<=0)endMission(false);
-  STATE.elapsed=1200-rem;
+  if(rem===300)speak('Five minutes.',.5);if(rem===120)speak('Two minutes.',.8);
+  if(rem<=0)endMission(false);STATE.elapsed=1200-rem;
 }
 
 function updateNav(){
@@ -662,145 +629,77 @@ function updateNav(){
   const d=dist(STATE.gpsLat,STATE.gpsLng,wp.lat,wp.lng);
   const bear=bearing(STATE.gpsLat,STATE.gpsLng,wp.lat,wp.lng);
   const rel=((bear-STATE.heading)+720)%360;
-
   document.getElementById('compass-arrow').style.transform=`translate(-50%,-100%) rotate(${rel}deg)`;
   document.getElementById('compass-ring').style.transform=`rotate(${-STATE.heading}deg)`;
   updateTeammateMarkers();
-
   const dEl=document.getElementById('distance');
   if(d<20){dEl.textContent='ARR';dEl.style.color='#0f0';}else{dEl.textContent=Math.round(d);dEl.style.color=d<100?'#0f0':'#0a0';}
-
   const dirs=['AHEAD','SLIGHT RIGHT','RIGHT','HARD RIGHT','BEHIND','HARD LEFT','LEFT','SLIGHT LEFT'];
   document.getElementById('bearing-label').textContent=dirs[Math.round(rel/45)%8];
   document.getElementById('wp-name').textContent=wp.name;
   document.getElementById('wp-intel').textContent=wp.intel||'';
-
-  const tension=d<30?1:d<60?.7:d<120?.4:d<250?.15:.03;
-  setToneTension(tension);
-
+  const tension=d<30?1:d<60?.7:d<120?.4:d<250?.15:.03;setToneTension(tension);
   if(Math.abs(d-STATE.lastBreathDist)>8){STATE.lastBreathDist=d;updateBreathUI();}
-
-  if(d<25&&document.getElementById('photo-btn').style.display==='none'){
-    document.getElementById('photo-btn').style.display='block';
-    speak('Target acquired. Take the shot.',0.7);
-  }
-
+  if(d<25&&document.getElementById('photo-btn').style.display==='none'){document.getElementById('photo-btn').style.display='block';speak('Target acquired.',.7);}
   const now=Date.now(),interval=d<50?7000:d<150?12000:16000;
-  if(now-STATE.lastNavCall>interval&&d>15){
-    STATE.lastNavCall=now;
-    const urg=d<50?.6:d<150?.25:0;
-    const hasNavText = wp.nav_text && wp.nav_text.length > 0;
-    if(hasNavText && d > 30){
-      speak(wp.nav_text, urg);
-    } else {
-      const dirName = dirs[Math.round(rel/45)%8];
-      speak(`${Math.round(d)} meters ${dirName.toLowerCase()}.`, urg);
-    }
-  }
+  if(now-STATE.lastNavCall>interval&&d>15){STATE.lastNavCall=now;const urg=d<50?.6:d<150?.25:0;const t=wp.nav_text;if(t&&d>30)speak(t,urg);else speak(`${Math.round(d)}m ${dirs[Math.round(rel/45)%8].toLowerCase()}.`,urg);}
 }
 
 function updateBreathUI(){
   if(!STATE.missionActive||STATE.currentWP>=STATE.waypoints.length||!STATE.gpsLat)return;
   const d=dist(STATE.gpsLat,STATE.gpsLng,STATE.waypoints[STATE.currentWP].lat,STATE.waypoints[STATE.currentWP].lng);
-  const box=document.getElementById('breath-box'),st=document.getElementById('breath-state'),tp=document.getElementById('breath-tip');
-  box.className='breath-box';
-  if(d<30){box.classList.add('panic');st.textContent='PANIC';st.style.color='#f00';tp.textContent='Take it.';}
-  else if(d<60){box.classList.add('fast');st.textContent='RAPID';st.style.color='#f80';tp.textContent='Stay sharp.';}
-  else if(d<120){st.textContent='ELEVATED';st.style.color='#ff0';tp.textContent='Slow is smooth.';}
-  else if(d<250){st.textContent='STEADY';st.style.color='#0f0';tp.textContent='Use cover.';}
-  else{st.textContent='CALM';st.style.color='#0a0';tp.textContent='Steady pace.';}
+  const b=document.getElementById('breath-box'),s=document.getElementById('breath-state'),p=document.getElementById('breath-tip');
+  b.className='breath-box';
+  if(d<30){b.classList.add('panic');s.textContent='PANIC';s.style.color='#f00';p.textContent='Take it.';}
+  else if(d<60){b.classList.add('fast');s.textContent='RAPID';s.style.color='#f80';p.textContent='Stay sharp.';}
+  else if(d<120){s.textContent='ELEVATED';s.style.color='#ff0';p.textContent='Slow is smooth.';}
+  else if(d<250){s.textContent='STEADY';s.style.color='#0f0';p.textContent='Use cover.';}
+  else{s.textContent='CALM';s.style.color='#0a0';p.textContent='Steady pace.';}
 }
 
 function updateTeammateMarkers(){
-  const ctr=document.getElementById('tm-markers'),ring=document.getElementById('compass-ring');
-  if(!STATE.gpsLat||!ring||!teamPlayers.length){ctr.innerHTML='';return;}
-  const r=ring.getBoundingClientRect(),cx=r.width/2,cy=r.height/2,rad=r.width*.4;
-  ctr.innerHTML=teamPlayers.filter(p=>p.lat&&p.lng&&p.id!==myId).map(p=>{
+  const c=document.getElementById('tm-markers'),r=document.getElementById('compass-ring');
+  if(!STATE.gpsLat||!r||players.length<2){c.innerHTML='';return;}
+  const re=r.getBoundingClientRect(),cx=re.width/2,cy=re.height/2,rad=re.width*.4;
+  c.innerHTML=players.filter(p=>p.lat&&p.lng&&p.id!==myId).map(p=>{
     const d=dist(STATE.gpsLat,STATE.gpsLng,p.lat,p.lng);if(d>500)return'';
     const b=bearing(STATE.gpsLat,STATE.gpsLng,p.lat,p.lng),rel=((b-STATE.heading)+720)%360;
     const rr=Math.min(d/500*rad,rad*.85),x=cx+Math.sin(rel*Math.PI/180)*rr,y=cy-Math.cos(rel*Math.PI/180)*rr;
-    const col=p.team==='alpha'?'#0f0':'#f44';
+    const col=p.team==='bravo'?'#f44':'#0f0';
     return`<div class="tm-marker" style="left:${x}px;top:${y}px;background:${col};box-shadow:0 0 5px ${col}" title="${p.name} · ${Math.round(d)}m"></div>`;
   }).join('');
 }
 
 function captureWP(idx){
   if(idx>=STATE.waypoints.length)return;
-  const dot=document.getElementById('wp-dot-'+idx);
-  if(dot){dot.classList.add('done');dot.classList.remove('current');}
-  if(idx===STATE.currentWP){
-    STATE.currentWP++;
-    if(STATE.currentWP>=STATE.waypoints.length){endMission(true);}
-    else{
-      document.getElementById('wp-dot-'+STATE.currentWP)?.classList.add('current');
-      document.getElementById('photo-btn').style.display='none';
-      speak('Teammate confirmed. Moving on.');
-    }
-  }
+  const dot=document.getElementById('wp-dot-'+idx);if(dot){dot.classList.add('done');dot.classList.remove('current');}
+  if(idx===STATE.currentWP){STATE.currentWP++;if(STATE.currentWP>=STATE.waypoints.length){endMission(true);}else{document.getElementById('wp-dot-'+STATE.currentWP)?.classList.add('current');document.getElementById('photo-btn').style.display='none';speak('Teammate confirmed.');}}
 }
 
-// ======== CAMERA ========
-function takePhoto(){
-  switchScreen('screen-camera');
-  const v=document.getElementById('camera-video');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{v.srcObject=s;}).catch(()=>{
-    const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';
-    i.onchange=e=>{const f=e.target.files[0];if(f)processPhoto(URL.createObjectURL(f));};i.click();
-  });
-}
-function capturePhoto(){
-  const v=document.getElementById('camera-video');
-  const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||480;
-  c.getContext('2d').drawImage(v,0,0);const d=c.toDataURL('image/jpeg',.8);
-  const s=v.srcObject;if(s)s.getTracks().forEach(t=>t.stop());
-  processPhoto(d);
-}
+function takePhoto(){switchScreen('screen-camera');const v=document.getElementById('camera-video');navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(s=>{v.srcObject=s;}).catch(()=>{const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';i.onchange=e=>{const f=e.target.files[0];if(f)processPhoto(URL.createObjectURL(f));};i.click();});}
+function capturePhoto(){const v=document.getElementById('camera-video');const c=document.createElement('canvas');c.width=v.videoWidth||640;c.height=v.videoHeight||480;c.getContext('2d').drawImage(v,0,0);const d=c.toDataURL('image/jpeg',.8);const s=v.srcObject;if(s)s.getTracks().forEach(t=>t.stop());processPhoto(d);}
 function processPhoto(dataUrl){
-  const wp=STATE.waypoints[STATE.currentWP];
-  const d=STATE.gpsLat?dist(STATE.gpsLat,STATE.gpsLng,wp.lat,wp.lng):0;
-  if(d<50||!STATE.gpsLat){
-    const bonus=Math.max(0,100-Math.round(d));
-    STATE.score+=wp.points+bonus;STATE.photos.push(dataUrl);
-    document.getElementById('wp-dot-'+STATE.currentWP).classList.add('done');
-    document.getElementById('wp-dot-'+STATE.currentWP).classList.remove('current');
-    STATE.currentWP++;
-    setToneTension(0);
-    if(ws)ws.send(JSON.stringify({type:'wp_captured',wp_index:STATE.currentWP-1}));
-    if(STATE.currentWP>=STATE.waypoints.length){endMission(true);}else{
-      document.getElementById('wp-dot-'+STATE.currentWP).classList.add('current');
-      document.getElementById('photo-btn').style.display='none';
-      const next=STATE.waypoints[STATE.currentWP];
-      speak(next.nav_text||`Confirmed. ${next.name}.`);
-      setTimeout(()=>setToneTension(.2),1500);
-    }
-  }else{speak(`Too far. ${Math.round(d)} meters.`);}
+  const wp=STATE.waypoints[STATE.currentWP];const d=STATE.gpsLat?dist(STATE.gpsLat,STATE.gpsLng,wp.lat,wp.lng):0;
+  if(d<50||!STATE.gpsLat){const bonus=Math.max(0,100-Math.round(d));STATE.score+=wp.points+bonus;STATE.photos.push(dataUrl);document.getElementById('wp-dot-'+STATE.currentWP).classList.add('done');document.getElementById('wp-dot-'+STATE.currentWP).classList.remove('current');STATE.currentWP++;setToneTension(0);broadcast({type:'wp_captured',wp_index:STATE.currentWP-1});if(STATE.currentWP>=STATE.waypoints.length){endMission(true);}else{document.getElementById('wp-dot-'+STATE.currentWP).classList.add('current');document.getElementById('photo-btn').style.display='none';const next=STATE.waypoints[STATE.currentWP];speak(next.nav_text||'Confirmed. '+next.name+'.');setTimeout(()=>setToneTension(.2),1500);}}else{speak(`Too far. ${Math.round(d)}m.`);}
   switchScreen('screen-mission');
 }
 function closeCamera(){const s=document.getElementById('camera-video').srcObject;if(s)s.getTracks().forEach(t=>t.stop());switchScreen('screen-mission');}
 function abortMission(){if(confirm('ABORT?')){speak('Aborted.');endMission(false);}}
 
 function endMission(success){
-  STATE.missionActive=false;
-  Object.values(_timers).forEach(clearInterval);
-  stopScore();
-  const timeBonus=success?Math.max(0,600-STATE.elapsed):0;
-  const finalScore=success?STATE.score+timeBonus:Math.round(STATE.score*.4);
-  let grade='FAILED';
-  if(success&&STATE.currentWP>=STATE.waypoints.length){
-    if(finalScore>800)grade='S';else if(finalScore>600)grade='A';else if(finalScore>350)grade='B';else grade='C';
-  }
-  document.getElementById('final-score').textContent=finalScore;
-  document.getElementById('final-grade').textContent=grade;
-  document.getElementById('final-grade').style.color=grade==='S'||grade==='A'?'#0f0':'#0a0';
+  STATE.missionActive=false;Object.values(_t).forEach(clearInterval);stopScore();
+  const tb=success?Math.max(0,600-STATE.elapsed):0,fs=success?STATE.score+tb:Math.round(STATE.score*.4);
+  let g='FAILED';if(success&&STATE.currentWP>=STATE.waypoints.length){if(fs>800)g='S';else if(fs>600)g='A';else if(fs>350)g='B';else g='C';}
+  document.getElementById('final-score').textContent=fs;
+  document.getElementById('final-grade').textContent=g;document.getElementById('final-grade').style.color=g==='S'||g==='A'?'#0f0':'#0a0';
   document.getElementById('final-stats').innerHTML=`OP: ${STATE.missionId}<br>WP: ${STATE.currentWP}/${STATE.waypoints.length}<br>TIME: ${Math.floor(STATE.elapsed/60)}:${(STATE.elapsed%60).toString().padStart(2,'0')}`;
   document.getElementById('final-photos').innerHTML=STATE.photos.map(p=>`<img src="${p}">`).join('');
-  switchScreen('screen-complete');
-  speak(grade==='S'?'Outstanding.'+config.callsign+'.':success?'Complete.':'Failed.');
+  switchScreen('screen-complete');speak(g==='S'?'Outstanding. '+callsign+'.':success?'Complete.':'Failed.');
 }
 
 function switchScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 
-// Init
+// Init: check stored sensor permission
 if(localStorage.getItem('wz_sensors')==='granted'){startGPS();startCompass();}
 </script>
 </body>

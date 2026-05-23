@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <title>WAYPOINT ZERO</title>
 <style>
 /* ============================================================
@@ -151,6 +152,15 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .briefing .b-narrative{font-size:8px;color:#050;font-style:italic;max-width:340px;text-align:left;border-left:1px solid #030;padding-left:10px;margin:4px 0;display:none}
 .briefing .deploy-area{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:4px}
 .briefing .deploy-area .ready-text{font-size:8px;color:#040;letter-spacing:.15em;animation:slowBlink 2s infinite}
+.briefing .briefing-map{width:100%;max-width:360px;height:180px;border:1px solid #051;margin:8px 0;border-radius:2px;overflow:hidden;background:#080c08}
+.briefing .briefing-map .leaflet-container{background:#080c08}
+.briefing .briefing-map .leaflet-control-zoom{display:none}
+.briefing .briefing-map .leaflet-control-attribution{display:none}
+
+/* ====== MISSION MINIMAP ====== */
+.mission .minimap{width:100%;max-width:300px;height:120px;border:1px solid #051;border-radius:2px;overflow:hidden;background:#080c08;margin:4px auto}
+.mission .minimap .leaflet-container{background:#080c08}
+.mission .minimap .leaflet-control-zoom,.mission .minimap .leaflet-control-attribution{display:none}
 
 /* ====== MISSION ====== */
 .mission{padding:10px;gap:4px;justify-content:flex-start}
@@ -322,6 +332,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
   <div class="b-locations" id="brief-locations"></div>
   <div class="b-narrative" id="brief-narrative"></div>
+  <div class="briefing-map" id="briefing-map"></div>
   <div class="deploy-area">
     <div class="ready-text">AWAITING AUTHORIZATION</div>
     <button class="btn primary" onclick="deployMission()" style="max-width:220px"><span class="label">▸ DEPLOY</span></button>
@@ -343,6 +354,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
       <div id="tm-markers"></div>
     </div>
   </div>
+  <div class="minimap" id="mission-minimap"></div>
   <div class="nav-info">
     <div class="distance" id="distance">--</div><div style="color:#060;font-size:12px">METERS</div>
     <div class="bearing-text" id="bearing-label">CALIBRATING</div>
@@ -383,6 +395,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 "use strict";
 const API = "https://waypoint-zero.swisschatbot.ch";
@@ -940,6 +953,9 @@ async function fetchMission(intensity){
       nel.textContent = 'INTEL: '+m.pack_narrative;
     }
 
+    // Render briefing map
+    renderBriefingMap(m.waypoints, lat, lng);
+
     // Briefing voice
     setTimeout(() => {
       const threat = m.threat_level || 'MODERATE';
@@ -999,6 +1015,9 @@ function deployMission(){
     `<div class="wp-dot${i===0?' current':''}" id="wp-dot-${i}">${i+1}</div>`
   ).join('');
   switchScreen('screen-mission');
+
+  // Init minimap
+  setTimeout(() => initMissionMinimap(S.waypoints, S.lat||47.33, S.lng||9.41), 500);
 
   // Start intervals
   window._timers = {};
@@ -1093,6 +1112,7 @@ function updateNav(){
   }
 
   updateTeammateMarkers();
+  updateMinimap();
 }
 
 // ====== WHISPER → GO! SEQUENCE ======
@@ -1644,6 +1664,104 @@ function dist(l1, ln1, l2, ln2){
   const Δφ=(l2-l1)*Math.PI/180, Δλ=(ln2-ln1)*Math.PI/180;
   const a=Math.sin(Δφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ======== MAPS (LEAFLET) ========
+let briefingMap = null;
+let missionMap = null;
+let missionMarker = null;
+let wpMarkers = [];
+
+function renderBriefingMap(waypoints, playerLat, playerLng){
+  const el = document.getElementById('briefing-map');
+  if(!el || !window.L) return;
+  
+  // Destroy previous map
+  if(briefingMap){ briefingMap.remove(); briefingMap = null; }
+  
+  briefingMap = L.map(el, {zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false});
+  
+  // Dark tile layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18
+  }).addTo(briefingMap);
+  
+  const markers = [];
+  // Player marker
+  const playerIcon = L.divIcon({className:'map-player', html:'<div style="width:10px;height:10px;background:#0af;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #0af"></div>', iconSize:[10,10], iconAnchor:[5,5]});
+  L.marker([playerLat, playerLng], {icon:playerIcon}).addTo(briefingMap).bindPopup('YOU');
+  markers.push([playerLat, playerLng]);
+  
+  // Waypoint markers
+  wpMarkers = [];
+  waypoints.forEach((wp, i) => {
+    const color = i === 0 ? '#0f0' : '#f80';
+    const numIcon = L.divIcon({
+      className:'map-wp',
+      html:`<div style="width:18px;height:18px;background:${color};border-radius:50%;border:2px solid #000;color:#000;font-size:9px;font-weight:900;line-height:18px;text-align:center;font-family:monospace;box-shadow:0 0 6px ${color}">${i+1}</div>`,
+      iconSize:[18,18], iconAnchor:[9,9]
+    });
+    const m = L.marker([wp.lat, wp.lng], {icon:numIcon}).addTo(briefingMap).bindPopup(wp.name);
+    wpMarkers.push(m);
+    markers.push([wp.lat, wp.lng]);
+  });
+  
+  // Route line
+  const route = [[playerLat, playerLng], ...waypoints.map(w => [w.lat, w.lng])];
+  L.polyline(route, {color:'#0a0', weight:2, opacity:.5, dashArray:'4 6'}).addTo(briefingMap);
+  
+  // Fit bounds
+  briefingMap.fitBounds(markers, {padding:[20,20]});
+}
+
+function initMissionMinimap(waypoints, playerLat, playerLng){
+  const el = document.getElementById('mission-minimap');
+  if(!el || !window.L) return;
+  
+  if(missionMap){ missionMap.remove(); missionMap = null; }
+  
+  missionMap = L.map(el, {zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false});
+  
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18
+  }).addTo(missionMap);
+  
+  // Waypoints
+  wpMarkers = [];
+  waypoints.forEach((wp, i) => {
+    const done = i < S.currentWP;
+    const current = i === S.currentWP;
+    const color = done ? '#060' : current ? '#0f0' : '#600';
+    const icon = L.divIcon({
+      className:'map-wp',
+      html:`<div style="width:${current?'12':'8'}px;height:${current?'12':'8'}px;background:${color};border-radius:50%;border:1px solid ${current?'#0f0':'#333'};box-shadow:0 0 ${current?'6':'2'}px ${color}"></div>`,
+      iconSize:current?[12,12]:[8,8], iconAnchor:current?[6,6]:[4,4]
+    });
+    const m = L.marker([wp.lat, wp.lng], {icon}).addTo(missionMap);
+    wpMarkers.push(m);
+  });
+  
+  // Player marker
+  const playerIcon = L.divIcon({
+    className:'map-player',
+    html:'<div style="width:10px;height:10px;background:#0af;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px #0af"></div>',
+    iconSize:[10,10], iconAnchor:[5,5]
+  });
+  missionMarker = L.marker([playerLat, playerLng], {icon:playerIcon}).addTo(missionMap);
+  
+  // Fit all waypoints
+  const all = waypoints.map(w => [w.lat, w.lng]);
+  all.push([playerLat, playerLng]);
+  missionMap.fitBounds(all, {padding:[10,10]});
+}
+
+function updateMinimap(){
+  if(!missionMap || !S.lat || !S.lng) return;
+  missionMarker.setLatLng([S.lat, S.lng]);
+  // Pan to follow player if they move off screen
+  if(!missionMap.getBounds().contains([S.lat, S.lng])){
+    missionMap.panTo([S.lat, S.lng], {animate:true});
+  }
 }
 
 // ======== SCREEN SWITCHING ========

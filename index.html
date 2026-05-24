@@ -61,14 +61,20 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .divider{width:100%;max-width:300px;border-top:1px solid #030;margin:12px 0;position:relative}
 .divider span{position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:#060608;padding:0 10px;font-size:7px;color:#050;letter-spacing:.1em}
 
-.status-line{font-size:9px;letter-spacing:.08em;min-height:14px;margin:4px 0;text-align:center}
+.status-line{font-size:10px;letter-spacing:.08em;min-height:14px;margin:4px 0;text-align:center}
 .status-line.waiting{color:#f80;animation:blink 2s infinite}
 .status-line.ready{color:#0f0}
 .status-line.error{color:#f00}
 
-.conn-indicator{font-size:8px;color:#060;text-align:center}
+.conn-indicator{font-size:9px;color:#060;text-align:center}
 
 /* ====== STATIC BAR ====== */
+
+/* Minimum font-size bump for legibility */
+.dossier .d-tagline{font-size:8px}
+.dossier .d-threat{font-size:8px}
+.dossier .d-info{font-size:8px}
+.briefing .b-intel-card{font-size:9px}
 .static-bar{position:fixed;top:0;left:0;width:100%;height:2px;background:rgba(0,255,0,.08);z-index:999;animation:staticBar 4s linear infinite;pointer-events:none;display:none}
 .static-bar.active{display:block}
 
@@ -185,7 +191,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mission .alert-banner.active{display:block;animation:blink 1s infinite}
 
 .mission .compass-area{flex:none;display:flex;align-items:center;justify-content:center;position:relative;min-height:110px;max-height:130px;width:100%}
-.mission .compass-ring{width:100px;height:100px;border-radius:50%;border:2px solid #0a0;position:relative;box-shadow:0 0 15px rgba(0,255,0,.08),inset 0 0 15px rgba(0,255,0,.03);transition:transform .5s}
+.mission .compass-ring{width:130px;height:130px;border-radius:50%;border:2px solid #0a0;position:relative;box-shadow:0 0 15px rgba(0,255,0,.08),inset 0 0 15px rgba(0,255,0,.03);transition:transform .5s}
 .mission .compass-ring.hot{border-color:#f80;box-shadow:0 0 25px rgba(255,80,0,.15)}
 .mission .compass-ring.go-time{border-color:#f44;box-shadow:0 0 35px rgba(255,0,0,.2);animation:pulseRed .5s infinite}
 .mission .compass-n,.mission .compass-s,.mission .compass-e,.mission .compass-w{position:absolute;font-size:9px;color:#0f0;font-weight:900}
@@ -217,7 +223,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .mission .wp-dot.current{border-color:#0f0;color:#0f0;box-shadow:0 0 10px #0f0;animation:pulse 1.5s infinite}
 .mission .wp-dot.go-time{border-color:#f44;color:#f44;box-shadow:0 0 15px rgba(255,0,0,.3);animation:pulseRed .8s infinite}
 .mission .m-photo-btn{display:none;padding:6px 14px;font-size:8px}
-.mission .m-abort-btn{padding:4px 8px;font-size:7px;max-width:40px}
+.mission .m-abort-btn{padding:8px 12px;font-size:10px;max-width:60px}
 .mission .m-ptt-btn{display:none;padding:6px 12px;font-size:8px;max-width:100px;background:rgba(0,20,0,.4);border:1px solid #0a0;color:#0f0;border-radius:4px;cursor:pointer;letter-spacing:.08em;transition:all .15s;font-family:inherit}
 .mission .m-ptt-btn.show{display:inline-block}
 .mission .m-ptt-btn.muted{background:rgba(40,0,0,.3);border-color:#600;color:#600}
@@ -371,6 +377,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <div class="deploy-area">
     <div class="ready-text">AWAITING AUTHORIZATION</div>
     <button class="btn primary" onclick="deployMission()" style="max-width:220px"><span class="label">▸ DEPLOY</span></button>
+    <button class="btn ghost small" onclick="briefingBack()" style="margin-top:6px">BACK</button>
   </div>
 </div>
 
@@ -432,6 +439,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="wz-geofence.js"></script>
+<script src="wz-adventure-engine.js"></script>
+<script src="wz-mock-gps.js"></script>
 <script>
 "use strict";
 const API = "https://waypoint-zero.swisschatbot.ch";
@@ -440,6 +449,13 @@ function D(m){ const e=document.getElementById('debug-bar');if(e)e.textContent=m
 // Geofence tracker (loaded from wz-geofence.js)
 let gf = null;
 let gfIntegration = null;
+
+// Adventure engine (loaded from wz-adventure-engine.js)
+let engine = null;
+
+// Mock GPS for offline testing (loaded from wz-mock-gps.js)
+let mockGps = null;
+const MOCK_MODE = new URLSearchParams(location.search).has('mock');
 
 // ======== STATE ========
 let myId = Math.random().toString(36).slice(2,8);
@@ -614,8 +630,21 @@ const VOICE_MODES = {
 let curSource = null;
 
 async function speak(text, mode='tactical', urgent=false){
+  // If adventure engine is active, use its priority queue
+  if(engine && engine.isActive){
+    const prio = mode === 'shout' ? 100 : mode === 'alert' ? 70 : urgent ? 85 : 50;
+    engine.audio.enqueue({
+      type: 'tts', text, voice: mode,
+      priority: prio,
+      interrupt: urgent,
+      id: 'speak_'+Date.now(),
+    });
+    updateVoiceDot(mode);
+    return;
+  }
+  
+  // Fallback: inline voice queue (for prologue, callsign, etc.)
   const m = VOICE_MODES[mode] || VOICE_MODES.tactical;
-  // Queue if already playing
   if(voicePlaying && !urgent){
     voiceQueue.push({text, mode});
     return;
@@ -1286,6 +1315,15 @@ function briefGeneratedMission(){
 }
 
 // ======== BRIEFING → DEPLOY ========
+function briefingBack(){
+  stopScore();
+  if(S.generated){
+    switchScreen('screen-distance');
+  } else {
+    switchScreen('screen-dossiers');
+  }
+}
+
 function deployMission(){
   S.currentWP = 0; S.score = 0; S.photos = [];
   S.startTime = Date.now(); S.active = true;
@@ -1336,7 +1374,55 @@ function deployMission(){
     gf.buildMissionZones(S.waypoints);
     gf.forceRecheck();
 
-    // Wire geofence events to adventure engine
+    // ── Create & start Adventure Engine ──
+    if(engine){ engine.stop(); }
+    engine = new AdventureEngine({
+      audioCtx: audioCtx,
+      toneScore: window._sc || null,
+      ttsEndpoint: API+'/tts',
+      audioBaseUrl: API+'/audio_fixed/',
+      onStateChange: (state, prev, data) => {
+        D('Engine: '+prev+' → '+state+' ('+(data?.reason||'?')+')');
+        if(state === 'complete') {
+          endMission(data?.reason === 'time_expired' ? false : true);
+        }
+      },
+      onAudioEvent: (event) => {
+        if(event.type === 'go_sequence_started') {
+          const banner = document.getElementById('alert-banner');
+          banner.textContent = '⚠ TARGET ACQUIRED — MOVE IN ⚠';
+          banner.classList.add('active');
+          setTimeout(() => banner.classList.remove('active'), 4000);
+        }
+      },
+      debug: true,
+    });
+    engine.start({
+      waypoints: S.waypoints,
+      timeLimit: timeLimit,
+    });
+
+    // Wire geofence events to engine
+    const unsubEnter = gf.on('enter', (event) => {
+      engine.onGeofenceEvent({
+        direction: 'enter',
+        zoneType: event.meta?.threshold?.id || 'perimeter',
+        parentWpIdx: event.parentWpIdx,
+        distanceToCenter: event.distanceToCenter,
+        meta: event.meta,
+      });
+    });
+    const unsubExit = gf.on('exit', (event) => {
+      engine.onGeofenceEvent({
+        direction: 'exit',
+        zoneType: event.meta?.threshold?.id || 'perimeter',
+        parentWpIdx: event.parentWpIdx,
+        distanceToCenter: event.distanceToCenter,
+        meta: event.meta,
+      });
+    });
+
+    // Also keep existing geofence→UI bridge for compass/breath updates
     if(gfIntegration) gfIntegration.stop();
     gfIntegration = wireGeofenceToAdventure(gf, {
       S: S,
@@ -1346,7 +1432,10 @@ function deployMission(){
       playStatic: playStatic,
     });
     gfIntegration.start();
-    D('Geofence: '+gf.zoneCount+' zones active');
+    // Store unsubs for cleanup
+    gfIntegration._engineUnsubs = [unsubEnter, unsubExit];
+
+    D('Geofence: '+gf.zoneCount+' zones active | Engine: started');
   }
 
   // Start intervals
@@ -1358,6 +1447,19 @@ function deployMission(){
   window._timers.tension = setInterval(() => {
     if(S.active && !gf) checkTensionTrigger(); // fallback when geofence disabled
   }, 500);
+  // Engine state → UI sync
+  window._timers.engineUI = setInterval(() => {
+    if(engine && S.active) syncEngineToUI();
+  }, 500);
+  // Engine timer tick
+  window._timers.engineTick = setInterval(() => {
+    if(engine && S.active) {
+      const total = S.generated ? S.timeLimit : 1200;
+      const rem = Math.max(0, total - Math.floor((Date.now()-S.startTime)/1000));
+      const elapsed = total - rem;
+      engine.onTimerTick(elapsed, rem);
+    }
+  }, 1000);
 
   // Deploy voice
   if(S.generated){
@@ -1373,6 +1475,27 @@ function deployMission(){
     setTension(.05);
     speak('Stay low. Watch your corners.', 'whisper');
   }, 5000);
+
+  // ── Start Mock GPS if in mock mode ──
+  if(MOCK_MODE || isTraining){
+    if(mockGps) mockGps.stop();
+    mockGps = new MockGPSEngine(gf, {
+      waypoints: S.waypoints,
+      speed: 2.0,
+      pauseAtWaypoint: 3000,
+      debug: true,
+      onTick: (pos) => {
+        S.lat = pos.lat;
+        S.lng = pos.lng;
+        if(S.active) updateNav();
+      },
+      onComplete: () => {
+        D('MockGPS: all waypoints visited');
+      },
+    });
+    mockGps.start();
+    D('Mock GPS: walking route ('+S.waypoints.length+' waypoints)');
+  }
 }
 
 // ======== MISSION LOOP ========
@@ -1623,6 +1746,47 @@ async function triggerGoSequence(){
   banner.textContent = '⚠ TARGET ACQUIRED — MOVE IN ⚠';
   banner.classList.add('active');
   setTimeout(() => banner.classList.remove('active'), 4000);
+}
+
+// ====== ENGINE → UI SYNC ======
+function syncEngineToUI(){
+  if(!engine) return;
+  const es = engine.getState();
+  
+  // Tension bar
+  document.getElementById('tension-fill').style.width = (es.tension*100)+'%';
+  if(es.tension > .7) document.getElementById('tension-fill').style.background = '#f44';
+  else if(es.tension > .4) document.getElementById('tension-fill').style.background = '#f80';
+  else document.getElementById('tension-fill').style.background = '#0a0';
+  
+  // Compass ring
+  const ring = document.getElementById('compass-ring');
+  if(es.state === 'go_sequence' || es.state === 'capturing'){
+    ring.className = 'compass-ring go-time';
+  } else if(es.tension > .5){
+    ring.className = 'compass-ring hot';
+  } else {
+    ring.className = 'compass-ring';
+  }
+  
+  // Voice dot
+  updateVoiceDot(es.voiceMode);
+  
+  // S.tensionLevel/voiceMode kept in sync for other code
+  S.tensionLevel = es.tension;
+  S.voiceMode = es.voiceMode;
+  
+  // Heartbeat
+  if(es.heartbeatBpm > 0){
+    setHeartbeat(es.heartbeatBpm, es.tension * 0.8);
+  }
+  
+  // Narrative beat check
+  if(S.lat && S.currentWP < S.waypoints.length){
+    const wp = S.waypoints[S.currentWP];
+    const d = S.lat ? dist(S.lat, S.lng, wp.lat, wp.lng) : 999;
+    engine.checkNarrativeBeat(d);
+  }
 }
 
 function updateBreathUI(){
@@ -1897,7 +2061,18 @@ function endMission(success){
   closeAudioRoom();
   // Stop geofence tracking
   if(gf) gf.stopTracking();
-  if(gfIntegration){ gfIntegration.stop(); gfIntegration = null; }
+  // Stop adventure engine
+  if(engine){ engine.stop(); engine = null; }
+  // Stop mock GPS
+  if(mockGps){ mockGps.stop(); mockGps = null; }
+  // Stop geofence integration (includes engine unsubs)
+  if(gfIntegration){
+    if(gfIntegration._engineUnsubs){
+      gfIntegration._engineUnsubs.forEach(fn => { try{fn();}catch(e){} });
+    }
+    gfIntegration.stop();
+    gfIntegration = null;
+  }
   if(window._timers){
     Object.values(window._timers).forEach(clearInterval);
   }

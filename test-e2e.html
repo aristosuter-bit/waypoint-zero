@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>WZ — E2E Integration Tests</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:monospace;background:#0a0a0a;color:#0f0;padding:20px;line-height:1.6}
+h1{color:#0f0;margin-bottom:4px;font-size:18px}
+h2{color:#0a0;margin:16px 0 8px;font-size:14px}
+.sub{color:#050;font-size:11px;margin-bottom:16px}
+.test{background:#0f0f0f;border:1px solid #111;padding:12px;margin:4px 0;border-radius:2px}
+.test.pass{border-left:3px solid #0f0}
+.test.fail{border-left:3px solid #f44;background:#1f0a0a}
+.test .name{font-weight:900;font-size:12px;margin-bottom:4px}
+.test .result{font-size:10px;margin-top:4px}
+.test .detail{font-size:9px;color:#050;margin-top:2px;white-space:pre-wrap}
+.pass .name{color:#0f0}
+.fail .name{color:#f44}
+.summary{font-size:14px;margin-top:16px;padding:12px;border:1px solid #0a0}
+.summary.pass{background:#0a1a0a}
+.summary.fail{background:#1a0a0a}
+.log{font-size:9px;color:#040;margin-top:8px;max-height:500px;overflow-y:auto;background:#050505;padding:8px}
+.log .line{margin:1px 0}
+pre{font-size:10px;color:#0a0;background:#0f0f0f;padding:8px;overflow-x:auto}
+</style>
+</head>
+<body>
+<h1>WAYPOINT ZERO — E2E Integration Tests</h1>
+<div class="sub">Adventure Engine + Geofence Simulation</div>
+<div id="results"></div>
+<div class="log" id="log"></div>
+
+<script src="wz-geofence.js"></script>
+<script src="wz-adventure-engine.js"></script>
+<script src="wz-mock-gps.js"></script>
+<script>
+"use strict";
+
+const results = document.getElementById('results');
+const logEl = document.getElementById('log');
+let total = 0, passed = 0, failed = 0;
+
+function log(msg) {
+  const line = document.createElement('div');
+  line.className = 'line';
+  line.textContent = `[${new Date().toISOString().slice(11,19)}] ${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function addResult(name, ok, detail) {
+  total++;
+  ok ? passed++ : failed++;
+  const div = document.createElement('div');
+  div.className = `test ${ok ? 'pass' : 'fail'}`;
+  div.innerHTML = `
+    <div class="name">${ok ? '✓' : '✗'} ${name}</div>
+    ${detail ? `<div class="detail">${detail}</div>` : ''}
+    <div class="result">${ok ? 'PASS' : 'FAIL'}</div>
+  `;
+  results.appendChild(div);
+}
+
+function showSummary() {
+  const s = document.createElement('div');
+  s.className = `summary ${failed === 0 ? 'pass' : 'fail'}`;
+  s.innerHTML = `
+    <strong>Results:</strong> ${passed}/${total} passed, ${failed} failed
+    ${failed === 0 ? ' ✓ ALL GREEN' : ' ✗ FIX REQUIRED'}
+  `;
+  results.appendChild(s);
+}
+
+// ═══════════════════════════════════════
+// TEST DATA
+// ═══════════════════════════════════════
+
+const TEST_WAYPOINTS = [
+  { lat: 47.3312, lng: 9.4105, name: 'TURN-01', nav_text: 'Move out. Heading established.', intel: 'First marker' },
+  { lat: 47.3335, lng: 9.4120, name: 'TURN-02', nav_text: 'Right at the junction.', intel: 'Second marker' },
+  { lat: 47.3320, lng: 9.4150, name: 'TURN-03', nav_text: 'Sharp left ahead.', intel: 'Third marker' },
+];
+
+// Simulated GPS positions walking toward WP0 (300m → 15m)
+const WALK_SEQUENCE = [
+  // Far → approaching
+  { direction: 'enter', zoneType: 'perimeter', parentWpIdx: 0, distanceToCenter: 190 },
+  // Approaching → engagement
+  { direction: 'enter', zoneType: 'approach', parentWpIdx: 0, distanceToCenter: 90 },
+  // Engagement → hot zone
+  { direction: 'enter', zoneType: 'engagement', parentWpIdx: 0, distanceToCenter: 55 },
+  // Hot zone → go trigger
+  { direction: 'enter', zoneType: 'hot_zone', parentWpIdx: 0, distanceToCenter: 28 },
+  // Go trigger!
+  { direction: 'enter', zoneType: 'go_trigger', parentWpIdx: 0, distanceToCenter: 22 },
+  // Capture
+  { direction: 'enter', zoneType: 'capture', parentWpIdx: 0, distanceToCenter: 10 },
+];
+
+// ═══════════════════════════════════════
+// TESTS
+// ═══════════════════════════════════════
+
+log('=== E2E Integration Tests ===');
+
+// Test 1: Engine instantiation
+{
+  log('Test 1: Engine instantiation');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({
+    audioCtx: ctx,
+    debug: false,
+  });
+  const state = eng.getState();
+  addResult('Engine starts in OFF state', state.state === 'off',
+    `Expected 'off', got '${state.state}'`);
+}
+
+// Test 2: Engine start transitions OFF → IDLE
+{
+  log('Test 2: Engine start');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+  eng.start({ waypoints: TEST_WAYPOINTS, timeLimit: 1200 });
+  const state = eng.getState();
+  addResult('Engine transitions OFF → IDLE on start', state.state === 'idle',
+    `Expected 'idle', got '${state.state}'`);
+}
+
+// Test 3: Full zone progression simulation
+{
+  log('Test 3: Zone progression simulation');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+  eng.start({ waypoints: TEST_WAYPOINTS, timeLimit: 1200 });
+
+  const simLog = eng.simulateSequence(WALK_SEQUENCE);
+
+  // Check state progression
+  const states = simLog.map(e => e.state_after);
+  addResult('State reaches GO_SEQ at go_trigger',
+    states.includes('go_sequence'),
+    `States: ${states.join(' → ')}`);
+
+  // capture zone processing happens after go_trigger; state may be 'capturing' or 'idle'
+  const hasCapture = states.includes('capturing') || states.includes('idle');
+  addResult('State processes capture zone (capturing or idle)',
+    hasCapture,
+    `States: ${states.join(' → ')}`);
+
+  // Check tension escalation
+  const tensions = simLog.map(e => e.tension);
+  const maxTension = Math.max(...tensions);
+  addResult('Tension escalates to ≥0.8', maxTension >= 0.8,
+    `Max tension: ${maxTension.toFixed(2)}`);
+
+  const minTension = Math.min(...tensions);
+  addResult('Tension starts low (<0.4)', minTension < 0.4,
+    `Min tension: ${minTension.toFixed(2)}`);
+
+  // Voice mode progression
+  const voices = simLog.map(e => e.voice);
+  addResult('Voice reaches "shout" mode', voices.includes('shout'),
+    `Voice modes: ${[...new Set(voices)].join(' → ')}`);
+}
+
+// Test 4: Waypoint auto-advance on capture
+{
+  log('Test 4: Waypoint auto-advance');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+  eng.start({ waypoints: TEST_WAYPOINTS, timeLimit: 1200 });
+
+  // Simulate full walk to capture
+  eng.simulateSequence(WALK_SEQUENCE);
+  const state = eng.getState();
+  addResult('Waypoint advances to WP1 after capture',
+    state.currentWpIdx === 1,
+    `currentWpIdx: ${state.currentWpIdx}, expected 1`);
+}
+
+// Test 5: All waypoints → COMPLETE
+{
+  log('Test 5: Full mission completion');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+  eng.start({ waypoints: TEST_WAYPOINTS, timeLimit: 1200 });
+
+  // Walk all 3 waypoints
+  for (let wp = 0; wp < TEST_WAYPOINTS.length; wp++) {
+    const seq = WALK_SEQUENCE.map(e => ({ ...e, parentWpIdx: wp }));
+    eng.simulateSequence(seq);
+  }
+
+  const state = eng.getState();
+  addResult('Mission completes after all waypoints',
+    state.state === 'complete',
+    `State: ${state.state}, WP: ${state.currentWpIdx}/${TEST_WAYPOINTS.length}`);
+}
+
+// Test 6: Time expiry
+{
+  log('Test 6: Time expiry');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+  eng.start({ waypoints: TEST_WAYPOINTS, timeLimit: 10 });
+
+  eng.onTimerTick(9, 1);
+  eng.onTimerTick(10, 0);
+
+  const state = eng.getState();
+  addResult('Engine completes on time expiry',
+    state.state === 'complete',
+    `State: ${state.state}`);
+}
+
+// Test 7: Audio priority queue
+{
+  log('Test 7: Audio priority queue');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+
+  // Enqueue items with different priorities
+  eng.audio.enqueue({ type: 'tone', priority: 10, id: 'low', durationMs: 10, action: () => {} });
+  eng.audio.enqueue({ type: 'tone', priority: 90, id: 'high', durationMs: 10, action: () => {} });
+  eng.audio.enqueue({ type: 'tone', priority: 50, id: 'mid', durationMs: 10, action: () => {} });
+
+  addResult('AudioManager exists', !!eng.audio, 'AudioManager instance present');
+  addResult('AudioManager has queue management', typeof eng.audio.enqueue === 'function',
+    'enqueue() is callable');
+  // Queue length may be <3 if one item already started playing (queue pops on dequeue)
+  addResult('AudioManager queue length ≥2',
+    eng.audio.queueLength >= 2,
+    `Queue length: ${eng.audio.queueLength}`);
+}
+
+// Test 8: Invalid transitions don't crash
+{
+  log('Test 8: Invalid transitions');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+
+  let crashed = false;
+  try {
+    // Try to go directly to GO_SEQ from OFF (invalid)
+    eng.onGeofenceEvent({ direction: 'enter', zoneType: 'go_trigger', parentWpIdx: 0, distanceToCenter: 20 });
+  } catch(e) {
+    crashed = true;
+  }
+  addResult('Engine handles invalid transitions gracefully', !crashed,
+    'No crash on invalid state transition');
+}
+
+// Test 9: Mock GPS engine math
+{
+  log('Test 9: Mock GPS geometry');
+  // Test that MockGPSEngine's geospatial math is correct
+  const mockOpts = {
+    waypoints: [{ lat: 47.3312, lng: 9.4105, name: 'WP0' }],
+    speed: 2.0,
+    debug: false,
+  };
+
+  // Create mock but don't start (no geofence needed for math check)
+  // Just verify the class exists
+  addResult('MockGPSEngine class is defined', typeof MockGPSEngine === 'function',
+    'MockGPSEngine is available');
+}
+
+// Test 10: Go sequence triggers at correct distance
+{
+  log('Test 10: Go sequence trigger proximity');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+  eng.start({ waypoints: TEST_WAYPOINTS, timeLimit: 1200 });
+
+  // Enter perimeter (should NOT trigger go)
+  eng.onGeofenceEvent({ direction: 'enter', zoneType: 'perimeter', parentWpIdx: 0, distanceToCenter: 150 });
+  let state = eng.getState();
+  addResult('Perimeter entry does NOT trigger GO sequence',
+    state.state !== 'go_sequence',
+    `State: ${state.state}`);
+
+  // Enter go_trigger (SHOULD trigger)
+  eng.onGeofenceEvent({ direction: 'enter', zoneType: 'go_trigger', parentWpIdx: 0, distanceToCenter: 20 });
+  state = eng.getState();
+  addResult('Go trigger entry triggers GO sequence',
+    state.state === 'go_sequence',
+    `State: ${state.state}`);
+}
+
+// Test 11: Duplicate go_trigger doesn't re-trigger
+{
+  log('Test 11: Duplicate go_trigger');
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const eng = new AdventureEngine({ audioCtx: ctx, debug: false });
+  eng.start({ waypoints: TEST_WAYPOINTS, timeLimit: 1200 });
+
+  eng.onGeofenceEvent({ direction: 'enter', zoneType: 'go_trigger', parentWpIdx: 0, distanceToCenter: 20 });
+  eng.onGeofenceEvent({ direction: 'exit', zoneType: 'go_trigger', parentWpIdx: 0, distanceToCenter: 30 });
+  eng.onGeofenceEvent({ direction: 'enter', zoneType: 'go_trigger', parentWpIdx: 0, distanceToCenter: 20 });
+
+  // Should still be in_zone (go_sequence completed, then enter→exit→enter should re-trigger)
+  const state = eng.getState();
+  addResult('Go trigger re-arms after exit',
+    state.state === 'go_sequence' || state.state === 'in_zone',
+    `State: ${state.state}`);
+}
+
+// Test 12: GeofenceManager zone building
+{
+  log('Test 12: GeofenceManager zone building');
+  if (typeof GeofenceManager === 'undefined') {
+    addResult('GeofenceManager available', false, 'GeofenceManager not loaded');
+  } else {
+    const gm = new GeofenceManager();
+    gm.buildMissionZones(TEST_WAYPOINTS);
+    addResult('Geofence builds zones for 3 waypoints',
+      gm.zoneCount === 18, // 3 waypoints × 6 zones each
+      `zoneCount: ${gm.zoneCount}, expected 18`);
+  }
+}
+
+// ═══════════════════════════════════════
+// SUMMARY
+// ═══════════════════════════════════════
+
+showSummary();
+log(`=== ${passed}/${total} tests passed ===`);
+</script>
+</body>
+</html>

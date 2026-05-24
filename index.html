@@ -431,10 +431,15 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/15.0.4/Tone.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="wz-geofence.js"></script>
 <script>
 "use strict";
 const API = "https://waypoint-zero.swisschatbot.ch";
 function D(m){ const e=document.getElementById('debug-bar');if(e)e.textContent=m;console.log('[WZ]',m); }
+
+// Geofence tracker (loaded from wz-geofence.js)
+let gf = null;
+let gfIntegration = null;
 
 // ======== STATE ========
 let myId = Math.random().toString(36).slice(2,8);
@@ -1325,13 +1330,34 @@ function deployMission(){
   // Init minimap: player-only for generated, full waypoints for API missions
   setTimeout(() => initMissionMinimap(S.waypoints, S.lat||47.33, S.lng||9.41, S.generated), 500);
 
+  // ── Setup geofence zones for this mission ──
+  if(gf){
+    gf.clearZones();
+    gf.buildMissionZones(S.waypoints);
+    gf.forceRecheck();
+
+    // Wire geofence events to adventure engine
+    if(gfIntegration) gfIntegration.stop();
+    gfIntegration = wireGeofenceToAdventure(gf, {
+      S: S,
+      speak: speak,
+      setTension: setTension,
+      setHeartbeat: setHeartbeat,
+      playStatic: playStatic,
+    });
+    gfIntegration.start();
+    D('Geofence: '+gf.zoneCount+' zones active');
+  }
+
   // Start intervals
   window._timers = {};
   window._timers.timer = setInterval(updateTimer, 1000);
   window._timers.nav = setInterval(() => { if(S.active) updateNav(); }, 1500);
   window._timers.pos = setInterval(() => { if(S.active) sendPosition(); }, 4000);
   window._timers.breath = setInterval(() => { if(S.active && S.lat) updateBreathUI(); }, 3000);
-  window._timers.tension = setInterval(() => { if(S.active) checkTensionTrigger(); }, 500);
+  window._timers.tension = setInterval(() => {
+    if(S.active && !gf) checkTensionTrigger(); // fallback when geofence disabled
+  }, 500);
 
   // Deploy voice
   if(S.generated){
@@ -1869,6 +1895,9 @@ function abortMission(){
 function endMission(success){
   S.active = false;
   closeAudioRoom();
+  // Stop geofence tracking
+  if(gf) gf.stopTracking();
+  if(gfIntegration){ gfIntegration.stop(); gfIntegration = null; }
   if(window._timers){
     Object.values(window._timers).forEach(clearInterval);
   }
@@ -2058,30 +2087,37 @@ function requestSensors(){
 }
 
 function startGPS(){
-  if(!navigator.geolocation){ D('No GPS'); return; }
-  let prevLat = null, prevLng = null;
-  navigator.geolocation.watchPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    S.lat = lat; S.lng = lng;
-    document.getElementById('gps-status').textContent = '● GPS '+lat.toFixed(4);
-    document.getElementById('gps-status').style.color = '#0a0';
-    
-    // GPS-derived heading (fallback when compass unavailable)
-    if(prevLat !== null && prevLng !== null){
-      const d = dist(prevLat, prevLng, lat, lng);
-      if(d > 5){ // only trust GPS heading when moving
-        S.gpsHeading = bearing(prevLat, prevLng, lat, lng);
-        S.gpsHeadingTime = Date.now();
-      }
+  // Initialize geofence manager if not already done
+  if(!gf){
+    gf = new GeofenceManager();
+    gf.on('heading_update', (e) => {
+      S.gpsHeading = e.heading;
+      S.gpsHeadingTime = e.timestamp;
+    });
+    gf.on('gps_error', (e) => {
+      document.getElementById('gps-status').textContent = 'GPS ERR';
+      document.getElementById('gps-status').style.color = '#300';
+    });
+    gf.on('tracking_started', () => {
+      document.getElementById('gps-status').textContent = '● GPS ACTIVE';
+      document.getElementById('gps-status').style.color = '#0a0';
+    });
+  }
+
+  if(gf.isTracking) return; // already tracking
+
+  gf.startTracking({ highAccuracy: true, maximumAge: 1500, timeout: 10000 });
+
+  // Keep S.lat/S.lng updated from geofence position
+  setInterval(() => {
+    const pos = gf.lastPosition;
+    if(pos){
+      S.lat = pos.lat;
+      S.lng = pos.lng;
+      document.getElementById('gps-status').textContent = '● GPS '+pos.lat.toFixed(4);
+      document.getElementById('gps-status').style.color = '#0a0';
     }
-    prevLat = lat; prevLng = lng;
-    
-    if(S.active){ updateNav(); updateBreathUI(); sendPosition(); }
-  }, e => {
-    document.getElementById('gps-status').textContent = 'GPS ERR';
-    document.getElementById('gps-status').style.color = '#300';
-  }, {enableHighAccuracy:true, maximumAge:1500, timeout:10000});
+  }, 2000);
 }
 
 function startCompass(){
@@ -2348,6 +2384,12 @@ function restoreState(){
         if(dot && i === S.currentWP) dot.classList.add('current');
       }
       document.getElementById('distance').textContent = '--';
+      // Reinitialize geofence for restored mission
+      if(gf){
+        gf.clearZones();
+        gf.buildMissionZones(S.waypoints);
+        gf.forceRecheck();
+      }
       return true;
     }
     
